@@ -12,11 +12,12 @@ const ODDS_API_BASE = 'https://api.the-odds-api.com/v4';
 // ── In-memory cache ──────────────────────────────────────────────────────────
 const cache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const SPORTS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes for sports discovery
 
-function getCached(key) {
+function getCached(key, ttl = CACHE_TTL_MS) {
   const entry = cache.get(key);
   if (!entry) return null;
-  if (Date.now() - entry.ts > CACHE_TTL_MS) { cache.delete(key); return null; }
+  if (Date.now() - entry.ts > ttl) { cache.delete(key); return null; }
   return entry.data;
 }
 function setCache(key, data) {
@@ -42,7 +43,8 @@ function normaliseProbabilities(rawProbs) {
   return rawProbs.map(p => Math.round((p / total) * 100));
 }
 
-function transformEvent(ev) {
+// ── Shared transform: three-way (football/soccer with draw) ───────────────────
+function transformThreeWayEvent(ev, { sport = 'football', competition = 'Premier League', competitionShort = 'PL' } = {}) {
   const h2hBooks = ev.bookmakers
     .map(b => {
       const market = b.markets.find(m => m.key === 'h2h');
@@ -87,9 +89,9 @@ function transformEvent(ev) {
 
   return {
     id: ev.id,
-    sport: 'football',
-    competition: 'Premier League',
-    competitionShort: 'PL',
+    sport,
+    competition,
+    competitionShort,
     homeTeam: ev.home_team,
     awayTeam: ev.away_team,
     kickoff: ev.commence_time,
@@ -101,28 +103,135 @@ function transformEvent(ev) {
   };
 }
 
-// ── API Routes ────────────────────────────────────────────────────────────────
-app.get('/api/odds/football', async (req, res) => {
+// ── Shared transform: two-way (boxing, NFL, etc.) ─────────────────────────────
+function transformTwoWayEvent(ev, { sport = 'boxing', competition = 'Boxing', competitionShort = 'BOX' } = {}) {
+  const h2hBooks = ev.bookmakers
+    .map(b => {
+      const market = b.markets.find(m => m.key === 'h2h');
+      if (!market || market.outcomes.length < 2) return null;
+      const [p1, p2] = market.outcomes;
+      const norm = normaliseProbabilities([1/p1.price * 100, 1/p2.price * 100]);
+      return { bookmaker: b.title, bookmakerKey: b.key, p1Prob: norm[0], p2Prob: norm[1] };
+    })
+    .filter(Boolean);
+
+  if (!h2hBooks.length) return null;
+
+  return {
+    id: ev.id,
+    sport,
+    competition,
+    competitionShort,
+    homeTeam: ev.home_team,
+    awayTeam: ev.away_team,
+    kickoff: ev.commence_time,
+    isLive: false,
+    outcomes: [
+      { id: 'home', label: ev.home_team, probability: Math.max(...h2hBooks.map(b => b.p1Prob)) },
+      { id: 'away', label: ev.away_team, probability: Math.max(...h2hBooks.map(b => b.p2Prob)) },
+    ],
+    bookmakers: h2hBooks,
+  };
+}
+
+// ── Generic sport odds fetcher ────────────────────────────────────────────────
+async function fetchSportOdds(req, res, { sportKey, cacheKey, transformFn, transformOpts = {}, maxEvents = 12 }) {
   try {
-    const cached = getCached('football_epl');
+    const cached = getCached(cacheKey);
     if (cached) return res.json(cached);
 
-    const data = await oddsApiFetch('/sports/soccer_epl/odds', {
+    const data = await oddsApiFetch(`/sports/${sportKey}/odds`, {
       regions: 'uk',
       markets: 'h2h',
       oddsFormat: 'decimal',
       dateFormat: 'iso',
     });
 
-    const events = data.map(transformEvent).filter(Boolean).slice(0, 12);
-    setCache('football_epl', events);
+    const events = data.map(ev => transformFn(ev, transformOpts)).filter(Boolean).slice(0, maxEvents);
+    setCache(cacheKey, events);
     res.json(events);
   } catch (err) {
-    console.error('Football odds error:', err.message);
+    console.error(`${cacheKey} odds error:`, err.message);
     res.status(500).json({ error: err.message });
   }
-});
+}
 
+// ── API Routes ────────────────────────────────────────────────────────────────
+
+// Premier League
+app.get('/api/odds/football', (req, res) =>
+  fetchSportOdds(req, res, {
+    sportKey: 'soccer_epl',
+    cacheKey: 'football_epl',
+    transformFn: transformThreeWayEvent,
+    transformOpts: { sport: 'football', competition: 'Premier League', competitionShort: 'PL' },
+  })
+);
+
+// Champions League
+app.get('/api/odds/champions-league', (req, res) =>
+  fetchSportOdds(req, res, {
+    sportKey: 'soccer_uefa_champs_league',
+    cacheKey: 'football_ucl',
+    transformFn: transformThreeWayEvent,
+    transformOpts: { sport: 'football', competition: 'Champions League', competitionShort: 'UCL' },
+  })
+);
+
+// EFL Championship
+app.get('/api/odds/championship', (req, res) =>
+  fetchSportOdds(req, res, {
+    sportKey: 'soccer_efl_champ',
+    cacheKey: 'football_efl',
+    transformFn: transformThreeWayEvent,
+    transformOpts: { sport: 'football', competition: 'EFL Championship', competitionShort: 'EFL' },
+  })
+);
+
+// La Liga
+app.get('/api/odds/la-liga', (req, res) =>
+  fetchSportOdds(req, res, {
+    sportKey: 'soccer_spain_la_liga',
+    cacheKey: 'football_laliga',
+    transformFn: transformThreeWayEvent,
+    transformOpts: { sport: 'football', competition: 'La Liga', competitionShort: 'LAL' },
+  })
+);
+
+// Boxing/MMA — two-way, no draw market
+app.get('/api/odds/boxing', (req, res) =>
+  fetchSportOdds(req, res, {
+    sportKey: 'boxing',
+    cacheKey: 'boxing',
+    transformFn: transformTwoWayEvent,
+    transformOpts: { sport: 'boxing', competition: 'Boxing', competitionShort: 'BOX' },
+    maxEvents: 8,
+  })
+);
+
+// NFL
+app.get('/api/odds/nfl', (req, res) =>
+  fetchSportOdds(req, res, {
+    sportKey: 'americanfootball_nfl',
+    cacheKey: 'nfl',
+    transformFn: transformTwoWayEvent,
+    transformOpts: { sport: 'americanfootball', competition: 'NFL', competitionShort: 'NFL' },
+    maxEvents: 10,
+  })
+);
+
+// NBA
+app.get('/api/odds/nba', (req, res) =>
+  fetchSportOdds(req, res, {
+    sportKey: 'basketball_nba',
+    cacheKey: 'nba',
+    transformFn: transformTwoWayEvent,
+    transformOpts: { sport: 'basketball', competition: 'NBA', competitionShort: 'NBA' },
+    maxEvents: 10,
+  })
+);
+
+// Tennis (existing, preserving player1/player2 shape for TennisCard)
 app.get('/api/odds/tennis', async (req, res) => {
   try {
     const cached = getCached('tennis');
@@ -172,6 +281,53 @@ app.get('/api/odds/tennis', async (req, res) => {
   }
 });
 
+// ── Sports discovery endpoint ─────────────────────────────────────────────────
+app.get('/api/sports', async (req, res) => {
+  try {
+    const cached = getCached('sports_discovery', SPORTS_CACHE_TTL_MS);
+    if (cached) return res.json(cached);
+
+    if (!ODDS_API_KEY) {
+      const staticSports = [
+        { key: 'soccer_epl', title: 'Premier League', group: 'Soccer', active: true },
+        { key: 'soccer_uefa_champs_league', title: 'Champions League', group: 'Soccer', active: true },
+        { key: 'soccer_efl_champ', title: 'EFL Championship', group: 'Soccer', active: true },
+        { key: 'soccer_spain_la_liga', title: 'La Liga', group: 'Soccer', active: true },
+        { key: 'boxing', title: 'Boxing', group: 'Boxing', active: true },
+        { key: 'americanfootball_nfl', title: 'NFL', group: 'American Football', active: true },
+        { key: 'basketball_nba', title: 'NBA', group: 'Basketball', active: true },
+      ];
+      setCache('sports_discovery', staticSports);
+      return res.json(staticSports);
+    }
+
+    const url = new URL(`${ODDS_API_BASE}/sports`);
+    url.searchParams.set('apiKey', ODDS_API_KEY);
+    const response = await fetch(url.toString(), {
+      headers: { 'User-Agent': 'PredictaMarket/1.0' },
+    });
+
+    if (!response.ok) throw new Error(`Sports API ${response.status}`);
+
+    const sports = await response.json();
+    const result = sports
+      .filter(s => s.active)
+      .map(s => ({
+        key: s.key,
+        title: s.title,
+        group: s.group,
+        active: s.active,
+        description: s.description || null,
+      }));
+
+    setCache('sports_discovery', result);
+    res.json(result);
+  } catch (err) {
+    console.error('Sports discovery error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
@@ -182,7 +338,6 @@ app.get('/api/health', (_req, res) => {
 });
 
 // ── Serve React build ─────────────────────────────────────────────────────────
-// Express v5: wildcard routes require explicit pattern, not bare '*'
 app.use(express.static(path.join(__dirname, 'dist')));
 app.get('/{*path}', (_req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));

@@ -11,11 +11,11 @@
  * values. Thresholds are co-located with the probability domain so they
  * remain canonical and are not duplicated across components.
  *
- * bet365 brand palette:
- *   High (>=70%): #00b67a (bet365 green)
- *   Mid  (>=50%): #ffb800 (bet365 yellow)
- *   Toss-up (>=35%): #f59e0b (amber-500)
- *   Low  (<35%): #64748b (slate-500)
+ * PredictaMarket v3 palette (ARIA rebrand):
+ *   High (>=70%): #A8FF3E (lime green)
+ *   Mid  (>=50%): #5B6EF5 (electric indigo)
+ *   Toss-up (>=35%): #FFD700 (amber)
+ *   Low  (<35%): #FF6B6B (coral)
  */
 
 /**
@@ -90,16 +90,16 @@ export function roundProb(prob) {
 
 /**
  * Get the Tailwind background colour class appropriate for a given probability.
- * Uses bet365 brand colours for semantic probability tiers.
+ * Uses v3 ARIA palette colours for semantic probability tiers.
  *
  * @param {number} pct - Probability percentage (0-100)
  * @returns {string} Tailwind-compatible bg class (uses arbitrary values for brand colours)
  */
 export function getProbabilityColour(pct) {
-  if (pct >= 70) return 'bg-[#00b67a]';
-  if (pct >= 50) return 'bg-[#ffb800]';
-  if (pct >= 35) return 'bg-[#f59e0b]';
-  return 'bg-[#64748b]';
+  if (pct >= 70) return 'bg-[#A8FF3E]';
+  if (pct >= 50) return 'bg-[#5B6EF5]';
+  if (pct >= 35) return 'bg-[#FFD700]';
+  return 'bg-[#FF6B6B]';
 }
 
 /**
@@ -110,24 +110,24 @@ export function getProbabilityColour(pct) {
  * @returns {string} Hex colour value
  */
 export function getProbabilityHex(pct) {
-  if (pct >= 70) return '#00b67a';
-  if (pct >= 50) return '#ffb800';
-  if (pct >= 35) return '#f59e0b';
-  return '#64748b';
+  if (pct >= 70) return '#A8FF3E';
+  if (pct >= 50) return '#5B6EF5';
+  if (pct >= 35) return '#FFD700';
+  return '#FF6B6B';
 }
 
 /**
  * Get the Tailwind text colour class appropriate for a given probability.
- * Uses bet365 brand colours for consistency with getProbabilityColour.
+ * Uses v3 ARIA palette colours for consistency with getProbabilityColour.
  *
  * @param {number} pct - Probability percentage (0-100)
  * @returns {string} Tailwind-compatible text class (uses arbitrary values for brand colours)
  */
 export function getProbabilityTextColour(pct) {
-  if (pct >= 70) return 'text-[#00b67a]';
-  if (pct >= 50) return 'text-[#ffb800]';
-  if (pct >= 35) return 'text-[#f59e0b]';
-  return 'text-gray-400';
+  if (pct >= 70) return 'text-[#A8FF3E]';
+  if (pct >= 50) return 'text-[#5B6EF5]';
+  if (pct >= 35) return 'text-[#FFD700]';
+  return 'text-[#FF6B6B]';
 }
 
 /**

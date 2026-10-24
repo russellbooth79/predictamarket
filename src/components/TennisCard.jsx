@@ -3,16 +3,17 @@
  *
  * Card for a tennis match with two-way outcome selection.
  * Shows tournament info, surface pill, head-to-head record,
- * and two outcome buttons with probabilities.
+ * and two outcome buttons with odds in the user's chosen format.
  *
  * Live matches display the current set scores with a live badge.
- * Source labels removed -- PredictaMarket branding only.
- * bet365 colour scheme applied throughout.
+ * PredictaMarket v3 palette: electric indigo accent, deep navy surfaces.
  */
 
 import { Clock, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
+import { useOddsFormat } from '../context/OddsFormatContext.jsx';
+import { formatOdds } from '../utils/oddsFormatter.js';
 import { getProbabilityTextColour } from '../data/oddsUtils.js';
 import ProbabilityBar from './ProbabilityBar.jsx';
 
@@ -51,6 +52,7 @@ const cardVariants = {
 
 export default function TennisCard({ fixture, index = 0 }) {
   const { addSelection, isSelected } = useBetSlip();
+  const { format } = useOddsFormat();
 
   function handleOutcomeClick(outcome, playerName) {
     addSelection({
@@ -76,14 +78,14 @@ export default function TennisCard({ fixture, index = 0 }) {
       animate="visible"
       className="rounded-xl overflow-hidden transition-colors"
       style={{
-        backgroundColor: '#1a2332',
-        border: '1px solid #2d3f52',
+        backgroundColor: '#0F1520',
+        border: '1px solid #1A2238',
       }}
-      onMouseEnter={(e) => e.currentTarget.style.borderColor = '#3d5068'}
-      onMouseLeave={(e) => e.currentTarget.style.borderColor = '#2d3f52'}
+      onMouseEnter={(e) => e.currentTarget.style.borderColor = '#252F45'}
+      onMouseLeave={(e) => e.currentTarget.style.borderColor = '#1A2238'}
     >
       {/* Header */}
-      <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(45,63,82,0.5)' }}>
+      <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(26,34,56,0.5)' }}>
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-white">
@@ -141,7 +143,7 @@ export default function TennisCard({ fixture, index = 0 }) {
 
       {/* Live score display */}
       {fixture.isLive && fixture.liveScore && (
-        <div className="px-4 py-2" style={{ borderBottom: '1px solid rgba(45,63,82,0.5)', backgroundColor: 'rgba(36,48,64,0.3)' }}>
+        <div className="px-4 py-2" style={{ borderBottom: '1px solid rgba(26,34,56,0.5)', backgroundColor: 'rgba(22,30,46,0.3)' }}>
           <div className="flex items-center justify-center gap-4">
             <span className="text-sm font-medium text-gray-200 w-24 text-right truncate">
               {fixture.player1.name}
@@ -175,7 +177,7 @@ export default function TennisCard({ fixture, index = 0 }) {
 
       {/* Head-to-head */}
       {fixture.headToHead && (
-        <div className="px-4 py-2" style={{ borderBottom: '1px solid rgba(45,63,82,0.5)' }}>
+        <div className="px-4 py-2" style={{ borderBottom: '1px solid rgba(26,34,56,0.5)' }}>
           <div className="flex items-center justify-center gap-3 text-xs">
             <span className="text-gray-400">
               <span className="text-gray-500 uppercase tracking-wide">H2H:</span>{' '}
@@ -204,24 +206,24 @@ export default function TennisCard({ fixture, index = 0 }) {
               style={
                 selected
                   ? {
-                      border: '1px solid #ffb800',
-                      backgroundColor: 'rgba(255,184,0,0.1)',
+                      border: '1px solid #5B6EF5',
+                      backgroundColor: 'rgba(91,110,245,0.1)',
                     }
                   : {
-                      border: '1px solid rgba(45,63,82,0.5)',
-                      backgroundColor: 'rgba(36,48,64,0.5)',
+                      border: '1px solid rgba(26,34,56,0.5)',
+                      backgroundColor: 'rgba(22,30,46,0.5)',
                     }
               }
               onMouseEnter={(e) => {
                 if (!selected) {
-                  e.currentTarget.style.backgroundColor = '#243040';
-                  e.currentTarget.style.borderColor = '#3d5068';
+                  e.currentTarget.style.backgroundColor = '#161E2E';
+                  e.currentTarget.style.borderColor = '#252F45';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!selected) {
-                  e.currentTarget.style.backgroundColor = 'rgba(36,48,64,0.5)';
-                  e.currentTarget.style.borderColor = 'rgba(45,63,82,0.5)';
+                  e.currentTarget.style.backgroundColor = 'rgba(22,30,46,0.5)';
+                  e.currentTarget.style.borderColor = 'rgba(26,34,56,0.5)';
                 }
               }}
             >
@@ -240,20 +242,15 @@ export default function TennisCard({ fixture, index = 0 }) {
                 WR #{player.ranking}
               </span>
 
-              {/* Probability */}
+              {/* Odds in user's chosen format */}
               <span className={`font-mono text-2xl font-bold ${textColour}`}>
-                {Math.round(outcome.probability)}%
+                {formatOdds(outcome.probability, format)}
               </span>
 
               {/* Probability bar */}
               <div className="w-full">
                 <ProbabilityBar probability={outcome.probability} />
               </div>
-
-              {/* Decimal odds */}
-              <span className="font-mono text-xs text-gray-500">
-                {outcome.decimalOdds.toFixed(2)}
-              </span>
             </button>
           );
         })}

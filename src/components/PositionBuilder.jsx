@@ -10,20 +10,28 @@
  * 4. Stake >= 20: ConfirmModal gates the submission
  * 5. On success: balance deducts, bet recorded, success state shown 2.5s, then reset
  *
- * bet365 colour scheme: yellow brand accent, dark navy panels.
+ * Accumulator support:
+ * - When 2+ selections: shows ACCA badge, acca label, combined probability,
+ *   combined decimal odds, numbered leg chain, and risk warning for 6+ legs.
+ * - Potential return uses combined odds for accas vs single-selection odds.
+ *
+ * PredictaMarket v3 palette: electric indigo accent, deep navy panels.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trash2, LayoutGrid, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Trash2, LayoutGrid, CheckCircle, AlertCircle, Loader2, Zap } from 'lucide-react';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { useUser } from '../context/UserContext.jsx';
+import { useOddsFormat } from '../context/OddsFormatContext.jsx';
+import { formatOdds, formatDecimalOdds } from '../utils/oddsFormatter.js';
 import { getProbabilityTextColour } from '../data/oddsUtils.js';
 import ConfirmModal from './ConfirmModal.jsx';
 
 const QUICK_STAKES = [5, 10, 25, 50];
 const HIGH_STAKE_THRESHOLD = 20;
 const SUCCESS_DISPLAY_MS = 2500;
+const MAX_RECOMMENDED_LEGS = 6;
 
 export default function PositionBuilder() {
   const {
@@ -40,18 +48,27 @@ export default function PositionBuilder() {
     insufficientFunds,
     cancel,
     reset,
+    // Accumulator derived values
+    combinedProbability,
+    combinedDecimalOdds,
+    isAccumulator,
+    accaLabel,
   } = useBetSlip();
 
   const { user, placeBet } = useUser();
+  const { format } = useOddsFormat();
 
   // Mobile bottom sheet toggle
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const stakeNum = parseFloat(stake) || 0;
 
+  // Potential return: single uses individual odds, acca uses combined odds
   const potentialReturn =
     selections.length > 0 && stakeNum > 0
-      ? parseFloat((stakeNum / (selections[0].probability / 100)).toFixed(2))
+      ? isAccumulator
+        ? parseFloat((stakeNum * combinedDecimalOdds).toFixed(2))
+        : parseFloat((stakeNum / (selections[0].probability / 100)).toFixed(2))
       : 0;
 
   function handlePlacePosition() {
@@ -105,16 +122,25 @@ export default function PositionBuilder() {
   const panelContent = (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #2d3f52' }}>
+      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #1A2238' }}>
         <div className="flex items-center gap-2">
-          <LayoutGrid className="w-4 h-4" style={{ color: '#ffb800' }} />
+          <LayoutGrid className="w-4 h-4" style={{ color: '#5B6EF5' }} />
           <h2 className="text-sm font-semibold text-white">Position Builder</h2>
           {hasSelections && (
             <span
-              className="flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-gray-900"
-              style={{ backgroundColor: '#ffb800' }}
+              className="flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white"
+              style={{ backgroundColor: '#5B6EF5' }}
             >
               {selections.length}
+            </span>
+          )}
+          {/* ACCA badge -- shown when 2+ selections */}
+          {isAccumulator && (
+            <span
+              className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: 'rgba(0,182,122,0.15)', color: '#00b67a' }}
+            >
+              ACCA
             </span>
           )}
         </div>
@@ -165,8 +191,8 @@ export default function PositionBuilder() {
             <button
               onClick={cancel}
               className="px-4 py-2 rounded-lg text-sm text-gray-300 hover:text-white transition-colors"
-              style={{ border: '1px solid #2d3f52' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#243040'}
+              style={{ border: '1px solid #1A2238' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#161E2E'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               Try Again
@@ -182,7 +208,7 @@ export default function PositionBuilder() {
               Insufficient Funds
             </h3>
             <p className="text-xs text-gray-400 mb-1">
-              Your balance is <span className="font-mono text-white">£{user.balance.toFixed(2)}</span>
+              Your balance is <span className="font-mono text-white">{'\u00A3'}{user.balance.toFixed(2)}</span>
             </p>
             <p className="text-xs text-gray-400 mb-4">
               Reduce your stake or add funds to continue.
@@ -190,8 +216,8 @@ export default function PositionBuilder() {
             <button
               onClick={cancel}
               className="px-4 py-2 rounded-lg text-sm text-gray-300 hover:text-white transition-colors"
-              style={{ border: '1px solid #2d3f52' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#243040'}
+              style={{ border: '1px solid #1A2238' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#161E2E'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               Go Back
@@ -202,7 +228,7 @@ export default function PositionBuilder() {
         {/* Submitting state */}
         {status === 'submitting' && (
           <div className="flex flex-col items-center justify-center py-16 px-4">
-            <Loader2 className="w-10 h-10 animate-spin mb-4" style={{ color: '#ffb800' }} />
+            <Loader2 className="w-10 h-10 animate-spin mb-4" style={{ color: '#5B6EF5' }} />
             <p className="text-sm text-gray-400">Placing your position...</p>
           </div>
         )}
@@ -212,7 +238,7 @@ export default function PositionBuilder() {
           <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
             <div
               className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
-              style={{ backgroundColor: '#243040' }}
+              style={{ backgroundColor: '#161E2E' }}
             >
               <LayoutGrid className="w-6 h-6 text-gray-600" />
             </div>
@@ -222,6 +248,81 @@ export default function PositionBuilder() {
             <p className="text-xs text-gray-500 max-w-[200px]">
               Click on any outcome to add it to your position builder.
             </p>
+          </div>
+        )}
+
+        {/* Accumulator summary -- shown above selections when 2+ legs */}
+        {isAccumulator && (status === 'idle' || status === 'confirming') && (
+          <div className="px-3 pt-3">
+            <div
+              className="rounded-lg p-3"
+              style={{
+                backgroundColor: 'rgba(0,182,122,0.06)',
+                border: '1px solid rgba(0,182,122,0.15)',
+              }}
+            >
+              {/* Acca label + combined probability */}
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#00b67a' }}>
+                  {accaLabel}
+                </span>
+                <span className="font-mono text-lg font-bold text-white">
+                  {formatOdds(combinedProbability, format)}
+                </span>
+              </div>
+
+              {/* Combined decimal odds */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-gray-500">Combined Odds</span>
+                <span className="font-mono text-sm font-medium" style={{ color: '#5B6EF5' }}>
+                  {formatDecimalOdds(combinedDecimalOdds, format)}
+                </span>
+              </div>
+
+              {/* Leg chain -- numbered legs connected by + */}
+              <div className="flex items-center flex-wrap gap-1">
+                {selections.map((sel, i) => (
+                  <div key={`${sel.eventId}-${sel.outcomeId}`} className="flex items-center gap-1">
+                    <span
+                      className="flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-bold"
+                      style={{ backgroundColor: '#161E2E', color: '#8A97B4' }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="text-[10px] text-gray-400 truncate max-w-[80px]">
+                      {sel.outcomeName}
+                    </span>
+                    <span className="text-[10px] font-mono text-gray-500">
+                      {formatOdds(sel.probability, format)}
+                    </span>
+                    {i < selections.length - 1 && (
+                      <span className="text-gray-600 font-bold text-xs mx-0.5">+</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Risk warning for 6+ legs */}
+              {selections.length > MAX_RECOMMENDED_LEGS && (
+                <div
+                  className="mt-3 px-2.5 py-2 rounded-lg text-[10px] text-gray-300 leading-relaxed"
+                  style={{ backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.15)' }}
+                >
+                  Accas over {MAX_RECOMMENDED_LEGS} legs carry significantly higher risk.
+                  Combined probability drops to {combinedProbability.toFixed(1)}%.
+                </div>
+              )}
+
+              {/* Boost your Acca -- visual element for 3+ legs */}
+              {selections.length >= 3 && (
+                <div className="mt-3 flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5" style={{ color: '#5B6EF5' }} />
+                  <span className="text-[10px] font-medium" style={{ color: '#5B6EF5' }}>
+                    Boost your Acca — enhanced odds available
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -241,8 +342,8 @@ export default function PositionBuilder() {
                     transition={{ duration: 0.2 }}
                     className="rounded-lg p-3"
                     style={{
-                      backgroundColor: 'rgba(36,48,64,0.5)',
-                      border: '1px solid rgba(45,63,82,0.5)',
+                      backgroundColor: 'rgba(22,30,46,0.5)',
+                      border: '1px solid rgba(26,34,56,0.5)',
                     }}
                   >
                     <div className="flex items-start justify-between mb-1">
@@ -261,9 +362,28 @@ export default function PositionBuilder() {
                         {sel.outcomeName}
                       </span>
                       <span className={`font-mono text-sm font-bold ${textColour}`}>
-                        {Math.round(sel.probability)}%
+                        {formatOdds(sel.probability, format)}
                       </span>
                     </div>
+                    {/* Each-way toggle for horse racing legs -- visual placeholder */}
+                    {sel.sport === 'horseracing' && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          className="text-[10px] text-gray-500 px-2 py-0.5 rounded-full transition-colors"
+                          style={{ border: '1px solid #1A2238' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = '#5B6EF5';
+                            e.currentTarget.style.color = '#5B6EF5';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = '#1A2238';
+                            e.currentTarget.style.color = '#8A97B4';
+                          }}
+                        >
+                          Each Way
+                        </button>
+                      </div>
+                    )}
                   </motion.div>
                 );
               })}
@@ -274,7 +394,7 @@ export default function PositionBuilder() {
 
       {/* Stake section */}
       {hasSelections && (status === 'idle' || status === 'confirming') && (
-        <div className="px-4 py-3 space-y-3" style={{ borderTop: '1px solid #2d3f52' }}>
+        <div className="px-4 py-3 space-y-3" style={{ borderTop: '1px solid #1A2238' }}>
           {/* Quick stake buttons */}
           <div className="flex gap-2">
             {QUICK_STAKES.map((amount) => (
@@ -284,23 +404,23 @@ export default function PositionBuilder() {
                 className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors"
                 style={
                   stakeNum === amount
-                    ? { backgroundColor: '#ffb800', color: '#111827' }
-                    : { backgroundColor: '#243040', color: '#94a3b8' }
+                    ? { backgroundColor: '#5B6EF5', color: '#ffffff' }
+                    : { backgroundColor: '#161E2E', color: '#8A97B4' }
                 }
                 onMouseEnter={(e) => {
                   if (stakeNum !== amount) {
-                    e.currentTarget.style.backgroundColor = '#2d3f52';
+                    e.currentTarget.style.backgroundColor = '#1A2238';
                     e.currentTarget.style.color = '#e2e8f0';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (stakeNum !== amount) {
-                    e.currentTarget.style.backgroundColor = '#243040';
-                    e.currentTarget.style.color = '#94a3b8';
+                    e.currentTarget.style.backgroundColor = '#161E2E';
+                    e.currentTarget.style.color = '#8A97B4';
                   }
                 }}
               >
-                £{amount}
+                {'\u00A3'}{amount}
               </button>
             ))}
           </div>
@@ -308,7 +428,7 @@ export default function PositionBuilder() {
           {/* Stake input */}
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-mono text-sm">
-              £
+              {'\u00A3'}
             </span>
             <input
               type="text"
@@ -318,15 +438,15 @@ export default function PositionBuilder() {
               placeholder="0.00"
               className="w-full rounded-lg pl-7 pr-3 py-2.5 font-mono text-sm text-white placeholder-gray-500 focus:outline-none transition-colors"
               style={{
-                backgroundColor: '#243040',
-                border: '1px solid #2d3f52',
+                backgroundColor: '#161E2E',
+                border: '1px solid #1A2238',
               }}
               onFocus={(e) => {
-                e.currentTarget.style.borderColor = '#ffb800';
-                e.currentTarget.style.boxShadow = '0 0 0 1px rgba(255,184,0,0.3)';
+                e.currentTarget.style.borderColor = '#5B6EF5';
+                e.currentTarget.style.boxShadow = '0 0 0 1px rgba(91,110,245,0.3)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = '#2d3f52';
+                e.currentTarget.style.borderColor = '#1A2238';
                 e.currentTarget.style.boxShadow = 'none';
               }}
             />
@@ -337,7 +457,7 @@ export default function PositionBuilder() {
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-400">Potential Return</span>
               <span className="font-mono text-sm font-bold" style={{ color: '#00b67a' }}>
-                £{potentialReturn.toFixed(2)}
+                {'\u00A3'}{potentialReturn.toFixed(2)}
               </span>
             </div>
           )}
@@ -350,34 +470,34 @@ export default function PositionBuilder() {
             style={
               stakeNum > 0
                 ? {
-                    backgroundColor: '#ffb800',
-                    color: '#111827',
-                    boxShadow: '0 4px 15px rgba(255,184,0,0.25)',
+                    background: 'linear-gradient(135deg, #5B6EF5, #7082F8)',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 15px rgba(91,110,245,0.25)',
                   }
                 : {
-                    backgroundColor: '#243040',
+                    backgroundColor: '#161E2E',
                     color: '#64748b',
                     cursor: 'not-allowed',
                   }
             }
             onMouseEnter={(e) => {
-              if (stakeNum > 0) e.currentTarget.style.backgroundColor = '#ffc933';
+              if (stakeNum > 0) e.currentTarget.style.background = 'linear-gradient(135deg, #7082F8, #8B9AF9)';
             }}
             onMouseLeave={(e) => {
-              if (stakeNum > 0) e.currentTarget.style.backgroundColor = '#ffb800';
+              if (stakeNum > 0) e.currentTarget.style.background = 'linear-gradient(135deg, #5B6EF5, #7082F8)';
             }}
           >
             {stakeNum >= HIGH_STAKE_THRESHOLD
-              ? `Confirm Position  ·  £${stakeNum.toFixed(2)}`
+              ? `Confirm ${isAccumulator ? accaLabel : 'Position'}  \u00B7  \u00A3${stakeNum.toFixed(2)}`
               : stakeNum > 0
-                ? `Place Position  ·  £${stakeNum.toFixed(2)}`
+                ? `Place ${isAccumulator ? accaLabel : 'Position'}  \u00B7  \u00A3${stakeNum.toFixed(2)}`
                 : 'Enter Stake'}
           </button>
         </div>
       )}
 
       {/* Responsible gambling footer */}
-      <div className="px-4 py-3 mt-auto" style={{ borderTop: '1px solid #2d3f52' }}>
+      <div className="px-4 py-3 mt-auto" style={{ borderTop: '1px solid #1A2238' }}>
         <div className="flex items-center justify-between text-[10px] text-gray-500">
           <button className="hover:text-gray-300 transition-colors underline">
             Deposit Limits
@@ -404,8 +524,8 @@ export default function PositionBuilder() {
       <aside
         className="hidden lg:flex flex-col fixed right-0 top-14 bottom-0 w-80 z-30"
         style={{
-          backgroundColor: '#1a2332',
-          borderLeft: '1px solid #2d3f52',
+          backgroundColor: '#0F1520',
+          borderLeft: '1px solid #1A2238',
         }}
       >
         {panelContent}
@@ -417,10 +537,10 @@ export default function PositionBuilder() {
         {hasSelections && !mobileOpen && (
           <button
             onClick={() => setMobileOpen(true)}
-            className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full text-gray-900 flex items-center justify-center"
+            className="fixed bottom-20 right-6 z-50 w-14 h-14 rounded-full text-white flex items-center justify-center"
             style={{
-              backgroundColor: '#ffb800',
-              boxShadow: '0 4px 15px rgba(255,184,0,0.3)',
+              background: 'linear-gradient(135deg, #5B6EF5, #7082F8)',
+              boxShadow: '0 4px 15px rgba(91,110,245,0.3)',
             }}
           >
             <div className="relative">
@@ -453,13 +573,13 @@ export default function PositionBuilder() {
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}
                 className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl max-h-[85vh] flex flex-col"
                 style={{
-                  backgroundColor: '#1a2332',
-                  borderTop: '1px solid #2d3f52',
+                  backgroundColor: '#0F1520',
+                  borderTop: '1px solid #1A2238',
                 }}
               >
                 {/* Drag handle */}
                 <div className="flex justify-center py-2">
-                  <div className="w-10 h-1 rounded-full" style={{ backgroundColor: '#2d3f52' }} />
+                  <div className="w-10 h-1 rounded-full" style={{ backgroundColor: '#1A2238' }} />
                 </div>
                 {panelContent}
               </motion.div>

@@ -11,9 +11,14 @@
  * Key constraint: max one selection per event (eventId). Adding a second
  * outcome for the same event replaces the previous selection — standard
  * sportsbook UX where toggling between Home/Draw/Away swaps the pick.
+ *
+ * Accumulator support: when selections.length > 1, derived acca values
+ * (combined probability, combined decimal odds, acca label) are computed
+ * and exposed via the context. These are pure derivations — no additional
+ * state is stored.
  */
 
-import { createContext, useContext, useReducer, useCallback } from 'react';
+import { createContext, useContext, useReducer, useCallback, useMemo } from 'react';
 
 const BetSlipContext = createContext(null);
 
@@ -87,6 +92,19 @@ function betSlipReducer(state, action) {
   }
 }
 
+/**
+ * Map selection count to standard UK betting terminology.
+ * Single is not labelled here — it's handled by the isAccumulator flag.
+ */
+function getAccaLabel(count) {
+  if (count === 2) return 'Double';
+  if (count === 3) return 'Treble';
+  if (count === 4) return 'Four-fold';
+  if (count === 5) return 'Five-fold';
+  if (count === 6) return 'Six-fold';
+  return `${count}-fold Acca`;
+}
+
 export function BetSlipProvider({ children }) {
   const [state, dispatch] = useReducer(betSlipReducer, initialState);
 
@@ -147,8 +165,30 @@ export function BetSlipProvider({ children }) {
     [state.selections]
   );
 
+  // ── Accumulator derived values ────────────────────────────────────────────
+  // Computed from selections on every render via useMemo.
+  // Combined probability: product of individual probabilities.
+  // e.g. 3 legs at 52%, 65%, 78% => (0.52 * 0.65 * 0.78) * 100 = 26.3%
+  const accaValues = useMemo(() => {
+    const { selections } = state;
+    const isAccumulator = selections.length > 1;
+
+    const combinedProbability = selections.length > 0
+      ? selections.reduce((acc, sel) => acc * (sel.probability / 100), 1) * 100
+      : 0;
+
+    const combinedDecimalOdds = combinedProbability > 0
+      ? parseFloat((1 / (combinedProbability / 100)).toFixed(2))
+      : 0;
+
+    const accaLabel = isAccumulator ? getAccaLabel(selections.length) : 'Single';
+
+    return { combinedProbability, combinedDecimalOdds, isAccumulator, accaLabel };
+  }, [state.selections]);
+
   const value = {
     ...state,
+    ...accaValues,
     addSelection,
     removeSelection,
     clearAll,

@@ -5,8 +5,8 @@
  * Renders inside MatchDetailView below the main outcome buttons.
  *
  * Layout: rows = bookmakers, columns = Home Win | Draw | Away Win.
- * Each cell shows probability (hero number) with decimal odds below.
- * Best probability per column gets a yellow highlight (#ffb800).
+ * Each cell shows odds in the user's chosen format with decimal odds below.
+ * Best probability per column gets an indigo highlight (#5B6EF5).
  * Worst probability per column is visually muted.
  *
  * A pinned "Best Price" summary row sits at the top showing the
@@ -14,22 +14,20 @@
  */
 
 import { useMemo } from 'react';
+import { useOddsFormat } from '../context/OddsFormatContext.jsx';
+import { formatOdds } from '../utils/oddsFormatter.js';
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// -- Constants ----------------------------------------------------------------
 
-const BRAND_CARD_BG = '#1a2332';
-const BRAND_BORDER = '#2d3f52';
-const BRAND_YELLOW = '#ffb800';
-const BEST_CELL_BG = 'rgba(255,184,0,0.12)';
-const BEST_CELL_BORDER = `3px solid ${BRAND_YELLOW}`;
+const BRAND_CARD_BG = '#0F1520';
+const BRAND_BORDER = '#1A2238';
+const BRAND_PRIMARY = '#5B6EF5';
+const BEST_CELL_BG = 'rgba(91,110,245,0.12)';
+const BEST_CELL_BORDER = `3px solid ${BRAND_PRIMARY}`;
 const MUTED_OPACITY = 0.45;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers ------------------------------------------------------------------
 
-/**
- * For each column (home/draw/away), compute the best (max) and worst (min)
- * probability across all bookmakers. Used to highlight best/worst cells.
- */
 function computeColumnExtremes(bookmakers) {
   const cols = ['homeProb', 'drawProb', 'awayProb'];
   const extremes = {};
@@ -52,11 +50,6 @@ function computeColumnExtremes(bookmakers) {
   return extremes;
 }
 
-/**
- * Determine cell visual state: 'best' | 'worst' | 'neutral'.
- * Only mark worst if there are 3+ bookmakers — with just 2, one is
- * best and one is worst, which looks odd.
- */
 function getCellState(value, extreme, bookmakerCount) {
   if (value == null) return 'neutral';
   if (value === extreme.best) return 'best';
@@ -64,9 +57,9 @@ function getCellState(value, extreme, bookmakerCount) {
   return 'neutral';
 }
 
-// ── OddsCell ──────────────────────────────────────────────────────────────────
+// -- OddsCell -----------------------------------------------------------------
 
-function OddsCell({ probability, decimalOdds, state }) {
+function OddsCell({ probability, decimalOdds, state, format }) {
   if (probability == null) {
     return (
       <td className="text-center py-3 px-2">
@@ -88,11 +81,11 @@ function OddsCell({ probability, decimalOdds, state }) {
     <td className="text-center py-3 px-2" style={cellStyle}>
       <span
         className="font-mono text-base font-bold block"
-        style={{ color: isBest ? BRAND_YELLOW : '#e2e8f0' }}
+        style={{ color: isBest ? BRAND_PRIMARY : '#e2e8f0' }}
       >
-        {Math.round(probability)}%
+        {formatOdds(probability, format)}
       </span>
-      {decimalOdds != null && (
+      {decimalOdds != null && format !== 'decimal' && (
         <span className="font-mono text-[10px] text-gray-500 block mt-0.5">
           {decimalOdds.toFixed(2)}
         </span>
@@ -101,10 +94,9 @@ function OddsCell({ probability, decimalOdds, state }) {
   );
 }
 
-// ── BestPriceRow ──────────────────────────────────────────────────────────────
+// -- BestPriceRow -------------------------------------------------------------
 
-function BestPriceRow({ bookmakers, extremes }) {
-  // Find best decimal odds (lowest) for each outcome
+function BestPriceRow({ bookmakers, extremes, format }) {
   const bestHomeOdds = bookmakers.reduce(
     (min, b) => (b.homeOdds != null && b.homeOdds < min ? b.homeOdds : min),
     Infinity
@@ -120,45 +112,45 @@ function BestPriceRow({ bookmakers, extremes }) {
   const hasDraw = extremes.drawProb.best != null;
 
   return (
-    <tr style={{ borderBottom: `2px solid ${BRAND_YELLOW}` }}>
+    <tr style={{ borderBottom: `2px solid ${BRAND_PRIMARY}` }}>
       <td className="py-3 px-3">
         <div className="flex items-center gap-2">
           <span
             className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-            style={{ backgroundColor: 'rgba(255,184,0,0.15)', color: BRAND_YELLOW }}
+            style={{ backgroundColor: 'rgba(91,110,245,0.15)', color: BRAND_PRIMARY }}
           >
             Best Price
           </span>
         </div>
       </td>
       <td className="text-center py-3 px-2" style={{ borderLeft: BEST_CELL_BORDER, backgroundColor: BEST_CELL_BG }}>
-        <span className="font-mono text-lg font-bold block" style={{ color: BRAND_YELLOW }}>
-          {extremes.homeProb.best != null ? `${Math.round(extremes.homeProb.best)}%` : '--'}
+        <span className="font-mono text-lg font-bold block" style={{ color: BRAND_PRIMARY }}>
+          {extremes.homeProb.best != null ? formatOdds(extremes.homeProb.best, format) : '--'}
         </span>
-        {bestHomeOdds < Infinity && (
-          <span className="font-mono text-[10px] block mt-0.5" style={{ color: BRAND_YELLOW, opacity: 0.7 }}>
+        {bestHomeOdds < Infinity && format !== 'decimal' && (
+          <span className="font-mono text-[10px] block mt-0.5" style={{ color: BRAND_PRIMARY, opacity: 0.7 }}>
             {bestHomeOdds.toFixed(2)}
           </span>
         )}
       </td>
       {hasDraw && (
         <td className="text-center py-3 px-2" style={{ borderLeft: BEST_CELL_BORDER, backgroundColor: BEST_CELL_BG }}>
-          <span className="font-mono text-lg font-bold block" style={{ color: BRAND_YELLOW }}>
-            {extremes.drawProb.best != null ? `${Math.round(extremes.drawProb.best)}%` : '--'}
+          <span className="font-mono text-lg font-bold block" style={{ color: BRAND_PRIMARY }}>
+            {extremes.drawProb.best != null ? formatOdds(extremes.drawProb.best, format) : '--'}
           </span>
-          {bestDrawOdds < Infinity && (
-            <span className="font-mono text-[10px] block mt-0.5" style={{ color: BRAND_YELLOW, opacity: 0.7 }}>
+          {bestDrawOdds < Infinity && format !== 'decimal' && (
+            <span className="font-mono text-[10px] block mt-0.5" style={{ color: BRAND_PRIMARY, opacity: 0.7 }}>
               {bestDrawOdds.toFixed(2)}
             </span>
           )}
         </td>
       )}
       <td className="text-center py-3 px-2" style={{ borderLeft: BEST_CELL_BORDER, backgroundColor: BEST_CELL_BG }}>
-        <span className="font-mono text-lg font-bold block" style={{ color: BRAND_YELLOW }}>
-          {extremes.awayProb.best != null ? `${Math.round(extremes.awayProb.best)}%` : '--'}
+        <span className="font-mono text-lg font-bold block" style={{ color: BRAND_PRIMARY }}>
+          {extremes.awayProb.best != null ? formatOdds(extremes.awayProb.best, format) : '--'}
         </span>
-        {bestAwayOdds < Infinity && (
-          <span className="font-mono text-[10px] block mt-0.5" style={{ color: BRAND_YELLOW, opacity: 0.7 }}>
+        {bestAwayOdds < Infinity && format !== 'decimal' && (
+          <span className="font-mono text-[10px] block mt-0.5" style={{ color: BRAND_PRIMARY, opacity: 0.7 }}>
             {bestAwayOdds.toFixed(2)}
           </span>
         )}
@@ -167,12 +159,13 @@ function BestPriceRow({ bookmakers, extremes }) {
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
+// -- Main Component -----------------------------------------------------------
 
 export default function BookmakerOddsPanel({ bookmakers, homeTeam, awayTeam }) {
   const extremes = useMemo(() => computeColumnExtremes(bookmakers), [bookmakers]);
   const hasDraw = extremes.drawProb.best != null;
   const bookmakerCount = bookmakers.length;
+  const { format } = useOddsFormat();
 
   if (bookmakerCount === 0) return null;
 
@@ -201,7 +194,7 @@ export default function BookmakerOddsPanel({ bookmakers, homeTeam, awayTeam }) {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[420px]">
           <thead>
-            <tr style={{ borderBottom: `1px solid rgba(45,63,82,0.5)` }}>
+            <tr style={{ borderBottom: '1px solid rgba(26,34,56,0.5)' }}>
               <th className="text-left py-2.5 px-3 w-36">
                 <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
                   Bookmaker
@@ -228,7 +221,7 @@ export default function BookmakerOddsPanel({ bookmakers, homeTeam, awayTeam }) {
           </thead>
           <tbody>
             {/* Pinned best-price summary row */}
-            <BestPriceRow bookmakers={bookmakers} extremes={extremes} />
+            <BestPriceRow bookmakers={bookmakers} extremes={extremes} format={format} />
 
             {/* Individual bookmaker rows */}
             {bookmakers.map((bm) => {
@@ -239,7 +232,7 @@ export default function BookmakerOddsPanel({ bookmakers, homeTeam, awayTeam }) {
               return (
                 <tr
                   key={bm.bookmakerKey}
-                  style={{ borderBottom: '1px solid rgba(45,63,82,0.2)' }}
+                  style={{ borderBottom: '1px solid rgba(26,34,56,0.2)' }}
                 >
                   <td className="py-3 px-3">
                     <span className="text-sm font-medium text-gray-300 truncate block max-w-[140px]">
@@ -250,18 +243,21 @@ export default function BookmakerOddsPanel({ bookmakers, homeTeam, awayTeam }) {
                     probability={bm.homeProb}
                     decimalOdds={bm.homeOdds}
                     state={homeState}
+                    format={format}
                   />
                   {hasDraw && (
                     <OddsCell
                       probability={bm.drawProb}
                       decimalOdds={bm.drawOdds}
                       state={drawState}
+                      format={format}
                     />
                   )}
                   <OddsCell
                     probability={bm.awayProb}
                     decimalOdds={bm.awayOdds}
                     state={awayState}
+                    format={format}
                   />
                 </tr>
               );

@@ -5,7 +5,7 @@
  * Shows full selection details with a clear summary of the position
  * before final confirmation.
  *
- * bet365 colour scheme: yellow confirm button, dark navy card.
+ * PredictaMarket v3 palette: indigo confirm button, deep navy card.
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -54,8 +54,8 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
           <motion.div
             className="relative rounded-2xl p-6 max-w-sm w-full shadow-2xl"
             style={{
-              backgroundColor: '#1a2332',
-              border: '1px solid #2d3f52',
+              backgroundColor: '#0F1520',
+              border: '1px solid #1A2238',
             }}
             variants={modalVariants}
             initial="hidden"
@@ -81,7 +81,7 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
             </div>
 
             <p className="text-sm text-gray-400 mb-4">
-              You are placing a position of <span className="font-mono text-white font-medium">£{parsedStake.toFixed(2)}</span>. Please review your selection{selections.length > 1 ? 's' : ''} below.
+              You are placing a position of <span className="font-mono text-white font-medium">{'\u00A3'}{parsedStake.toFixed(2)}</span>. Please review your selection{selections.length > 1 ? 's' : ''} below.
             </p>
 
             {/* Selection details */}
@@ -93,8 +93,8 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
                     key={`${sel.eventId}-${sel.outcomeId}`}
                     className="rounded-lg p-3"
                     style={{
-                      backgroundColor: 'rgba(36,48,64,0.5)',
-                      border: '1px solid rgba(45,63,82,0.5)',
+                      backgroundColor: 'rgba(22,30,46,0.5)',
+                      border: '1px solid rgba(26,34,56,0.5)',
                     }}
                   >
                     <p className="text-xs text-gray-400 mb-0.5">{sel.eventName}</p>
@@ -117,17 +117,17 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
             </div>
 
             {/* Summary line */}
-            <div className="flex items-center justify-between py-3 mb-5" style={{ borderTop: '1px solid rgba(45,63,82,0.5)' }}>
+            <div className="flex items-center justify-between py-3 mb-5" style={{ borderTop: '1px solid rgba(26,34,56,0.5)' }}>
               <div>
                 <p className="text-xs text-gray-400">Stake</p>
                 <p className="font-mono text-base font-bold text-white">
-                  £{parsedStake.toFixed(2)}
+                  {'\u00A3'}{parsedStake.toFixed(2)}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-400">Potential Return</p>
                 <p className="font-mono text-base font-bold" style={{ color: '#00b67a' }}>
-                  £{potentialReturn.toFixed(2)}
+                  {'\u00A3'}{potentialReturn.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -137,22 +137,21 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
               <button
                 onClick={onCancel}
                 className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white transition-colors"
-                style={{ border: '1px solid #2d3f52' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#243040'}
+                style={{ border: '1px solid #1A2238' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#161E2E'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 Cancel
               </button>
               <button
                 onClick={onConfirm}
-                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors text-white"
                 style={{
-                  backgroundColor: '#ffb800',
-                  color: '#111827',
-                  boxShadow: '0 4px 15px rgba(255,184,0,0.25)',
+                  background: 'linear-gradient(135deg, #5B6EF5, #7082F8)',
+                  boxShadow: '0 4px 15px rgba(91,110,245,0.25)',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ffc933'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffb800'}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #7082F8, #8B9AF9)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #5B6EF5, #7082F8)'}
               >
                 Confirm Position
               </button>

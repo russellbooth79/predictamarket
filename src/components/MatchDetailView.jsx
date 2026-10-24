@@ -6,28 +6,29 @@
  *
  * Sections (top to bottom):
  * 1. Back navigation + match header (competition, teams, score, live badge)
- * 2. Match Odds (3-col) + Live Bet Feed (side by side on desktop)
- * 3. Bookmaker Price Comparison (Oddschecker-style table) — live data only
- * 4. Odds Probability Graph (full width SVG)
- * 5. Match Stats (horizontal bars -- live/completed only)
- * 6. Match Timeline (chronological events -- live/completed only)
- * 7. More Markets (collapsible sections)
+ * 2. NarrativePrompts (popular bet suggestions)
+ * 3. Match Odds (3-col) + Live Bet Feed (side by side on desktop)
+ * 4. Bookmaker Price Comparison (Oddschecker-style table) -- live data only
+ * 5. Odds Probability Graph (full width SVG)
+ * 6. Match Stats (horizontal bars -- live/completed only)
+ * 7. Match Timeline (chronological events -- live/completed only)
+ * 8. More Markets (collapsible sections)
  *
- * Props:
- *   fixture  - from fixtures.js or live API (required)
- *   detail   - from matchDetails.js (may be null for fixtures without detail data)
- *   onBack   - callback to return to the event feed
+ * PredictaMarket v3 palette: electric indigo accent, deep navy surfaces.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
+import { useOddsFormat } from '../context/OddsFormatContext.jsx';
+import { formatOdds } from '../utils/oddsFormatter.js';
 import { getProbabilityTextColour, getProbabilityHex } from '../data/oddsUtils.js';
 import { generateBetActivity, initialBetActivity, FEED_POLL_INTERVAL_MS, HIGH_ROLLER_STAKE_THRESHOLD } from '../data/betActivity.js';
 import ProbabilityBar from './ProbabilityBar.jsx';
 import BookmakerOddsPanel from './BookmakerOddsPanel.jsx';
+import NarrativePrompts from './NarrativePrompts.jsx';
 
-// ─── Helper: format date for the match header ───────────────────────────────
+// -- Helper: format date for the match header --------------------------------
 
 function formatMatchDate(kickoff) {
   const date = new Date(kickoff);
@@ -44,7 +45,7 @@ function formatMatchDate(kickoff) {
   return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-// ─── Helper: relative time display for bet feed ─────────────────────────────
+// -- Helper: relative time display for bet feed ------------------------------
 
 function timeAgo(timestamp) {
   const now = Date.now();
@@ -58,19 +59,12 @@ function timeAgo(timestamp) {
   return `${Math.floor(diffMin / 60)}h ago`;
 }
 
-// ─── Bookmaker colour palette for graph secondary lines ─────────────────────
-// Muted, distinguishable tones that won't compete with the main best-price line
+// -- Bookmaker colour palette for graph secondary lines ----------------------
 const BOOKMAKER_LINE_COLOURS = [
-  '#6b7280', // gray-500
-  '#7c8594', // lighter gray
-  '#5b6370', // darker gray
-  '#8b95a3', // slate tone
+  '#6b7280', '#7c8594', '#5b6370', '#8b95a3',
 ];
 
-// ─── OddsGraph ──────────────────────────────────────────────────────────────
-// Pure SVG line chart. No external charting library.
-// Main line: best probability (thick, #ffb800)
-// Secondary lines: individual bookmaker probabilities (thin, gray, low opacity)
+// -- OddsGraph ---------------------------------------------------------------
 
 function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
   const [hoverIndex, setHoverIndex] = useState(null);
@@ -92,7 +86,6 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
   const CHART_W = W - PAD_LEFT - PAD_RIGHT;
   const CHART_H = H - PAD_TOP - PAD_BOTTOM;
 
-  // Determine x-axis mode: live uses `minute`, prematch uses `hoursAgo`
   const usesMinute = history[0].minute !== undefined;
   const getX = (point) => usesMinute ? point.minute : (24 - (point.hoursAgo || 0));
   const xValues = history.map(getX);
@@ -107,7 +100,6 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
     return PAD_TOP + CHART_H - (prob / 100) * CHART_H;
   }
 
-  // Build SVG path data using smooth cubic bezier (catmull-rom to bezier conversion)
   function buildPath(key) {
     const points = history.map((p) => ({ x: toSvgX(getX(p)), y: toSvgY(p[key]) }));
     if (points.length < 2) return '';
@@ -116,7 +108,6 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
     for (let i = 1; i < points.length; i++) {
       const prev = points[i - 1];
       const curr = points[i];
-      // Simple smooth bezier: control points at 1/3 horizontal distance
       const cpx = (curr.x - prev.x) / 3;
       d += ` C ${prev.x + cpx} ${prev.y}, ${curr.x - cpx} ${curr.y}, ${curr.x} ${curr.y}`;
     }
@@ -127,15 +118,12 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
   const drawPath = buildPath('draw');
   const awayPath = buildPath('away');
 
-  // X-axis labels
   const xLabels = usesMinute
     ? [0, 15, 30, 45, 60, 75, 90].filter((m) => m >= xMin && m <= xMax + 5)
     : [0, 4, 8, 12, 16, 20, 24];
 
-  // Y-axis labels
   const yLabels = [0, 25, 50, 75, 100];
 
-  // Hover interaction: find nearest point index
   function handleMouseMove(e) {
     const svg = e.currentTarget;
     const rect = svg.getBoundingClientRect();
@@ -148,11 +136,8 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
 
   const hoverPoint = hoverIndex !== null ? history[hoverIndex] : null;
 
-  // Render thin bookmaker-specific probability lines on the graph
-  // We overlay horizontal lines at each bookmaker's current home probability
-  // to show spread across books (only when bookmakers data present)
   const bookmakerLines = bookmakers && bookmakers.length > 0
-    ? bookmakers.slice(0, 4) // Cap at 4 to avoid clutter
+    ? bookmakers.slice(0, 4)
     : [];
 
   return (
@@ -160,7 +145,7 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
       {/* Legend */}
       <div className="flex items-center gap-6 mb-3 px-1 flex-wrap">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#ffb800' }} />
+          <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#5B6EF5' }} />
           <span className="text-xs text-gray-400">{homeTeam}</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -186,13 +171,12 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoverIndex(null)}
       >
-        {/* Grid lines */}
         {yLabels.map((val) => (
           <g key={`grid-${val}`}>
             <line
               x1={PAD_LEFT} y1={toSvgY(val)}
               x2={W - PAD_RIGHT} y2={toSvgY(val)}
-              stroke="#2d3f52" strokeWidth="0.5" strokeDasharray="4 4"
+              stroke="#1A2238" strokeWidth="0.5" strokeDasharray="4 4"
             />
             <text
               x={PAD_LEFT - 6} y={toSvgY(val) + 4}
@@ -203,7 +187,6 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
           </g>
         ))}
 
-        {/* X-axis labels */}
         {xLabels.map((val) => {
           const svgX = toSvgX(val);
           const label = usesMinute ? `${val}'` : `${24 - val}h`;
@@ -218,7 +201,6 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
           );
         })}
 
-        {/* Bookmaker-specific horizontal reference lines (home prob only, to show spread) */}
         {bookmakerLines.map((bm, i) => (
           <line
             key={`bm-line-${bm.bookmakerKey}`}
@@ -233,12 +215,10 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
           />
         ))}
 
-        {/* Main best-price lines — these are the dominant visual */}
-        <path d={homePath} fill="none" stroke="#ffb800" strokeWidth="2.5" strokeLinejoin="round" />
+        <path d={homePath} fill="none" stroke="#5B6EF5" strokeWidth="2.5" strokeLinejoin="round" />
         <path d={drawPath} fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinejoin="round" opacity="0.7" />
         <path d={awayPath} fill="none" stroke="#e5302f" strokeWidth="2" strokeLinejoin="round" />
 
-        {/* Current moment marker for live */}
         {isLive && history.length > 0 && (() => {
           const last = history[history.length - 1];
           const cx = toSvgX(getX(last));
@@ -246,12 +226,11 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
             <line
               x1={cx} y1={PAD_TOP}
               x2={cx} y2={PAD_TOP + CHART_H}
-              stroke="#ffb800" strokeWidth="1" strokeDasharray="4 2" opacity="0.5"
+              stroke="#5B6EF5" strokeWidth="1" strokeDasharray="4 2" opacity="0.5"
             />
           );
         })()}
 
-        {/* Hover vertical line + tooltip */}
         {hoverPoint && (() => {
           const hx = toSvgX(getX(hoverPoint));
           return (
@@ -261,18 +240,16 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
                 x2={hx} y2={PAD_TOP + CHART_H}
                 stroke="#ffffff" strokeWidth="0.5" opacity="0.3"
               />
-              {/* Data points */}
-              <circle cx={hx} cy={toSvgY(hoverPoint.home)} r="4" fill="#ffb800" />
+              <circle cx={hx} cy={toSvgY(hoverPoint.home)} r="4" fill="#5B6EF5" />
               <circle cx={hx} cy={toSvgY(hoverPoint.draw)} r="3" fill="#94a3b8" />
               <circle cx={hx} cy={toSvgY(hoverPoint.away)} r="3.5" fill="#e5302f" />
 
-              {/* Tooltip background */}
               <rect
                 x={hx + 10} y={PAD_TOP}
                 width="90" height="54" rx="4"
-                fill="#1a2332" stroke="#2d3f52" strokeWidth="0.5"
+                fill="#0F1520" stroke="#1A2238" strokeWidth="0.5"
               />
-              <text x={hx + 18} y={PAD_TOP + 15} fill="#ffb800" fontSize="11" fontFamily="JetBrains Mono, monospace">
+              <text x={hx + 18} y={PAD_TOP + 15} fill="#5B6EF5" fontSize="11" fontFamily="JetBrains Mono, monospace">
                 H: {hoverPoint.home}%
               </text>
               <text x={hx + 18} y={PAD_TOP + 30} fill="#94a3b8" fontSize="11" fontFamily="JetBrains Mono, monospace">
@@ -289,12 +266,10 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
   );
 }
 
-// ─── LiveBetFeed ────────────────────────────────────────────────────────────
-// Real-time simulated bet activity feed. Generates new items every 3s.
+// -- LiveBetFeed -------------------------------------------------------------
 
 function LiveBetFeed({ fixture }) {
   const [items, setItems] = useState(() => {
-    // Filter initial activity to this fixture, pad with cross-fixture items
     const forFixture = initialBetActivity.filter((b) => b.fixtureId === fixture.id);
     const others = initialBetActivity.filter((b) => b.fixtureId !== fixture.id).slice(0, 15 - forFixture.length);
     return [...forFixture, ...others].slice(0, 15);
@@ -309,7 +284,7 @@ function LiveBetFeed({ fixture }) {
     intervalRef.current = setInterval(() => {
       const newItem = generateBetActivity(fixture);
       setItems((prev) => [newItem, ...prev].slice(0, 15));
-    }, FEED_POLL_INTERVAL_MS + Math.random() * 2000); // 3-5s jitter
+    }, FEED_POLL_INTERVAL_MS + Math.random() * 2000);
 
     return () => clearInterval(intervalRef.current);
   }, [fixture, paused]);
@@ -317,11 +292,11 @@ function LiveBetFeed({ fixture }) {
   return (
     <div
       className="rounded-xl overflow-hidden h-full"
-      style={{ backgroundColor: '#1a2332', border: '1px solid #2d3f52' }}
+      style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="px-4 py-2.5" style={{ borderBottom: '1px solid #2d3f52' }}>
+      <div className="px-4 py-2.5" style={{ borderBottom: '1px solid #1A2238' }}>
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Bet Feed</h3>
       </div>
       <div className="overflow-y-auto custom-scrollbar" style={{ maxHeight: '340px' }}>
@@ -330,15 +305,14 @@ function LiveBetFeed({ fixture }) {
             key={item.id}
             className="px-4 py-2.5 transition-all duration-300"
             style={{
-              borderBottom: '1px solid rgba(45,63,82,0.3)',
+              borderBottom: '1px solid rgba(26,34,56,0.3)',
               animation: idx === 0 ? 'slide-in-top 0.3s ease-out' : undefined,
             }}
           >
             <div className="flex items-start gap-2.5">
-              {/* Avatar initials */}
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                style={{ backgroundColor: '#243040', color: '#94a3b8' }}
+                style={{ backgroundColor: '#161E2E', color: '#8A97B4' }}
               >
                 {item.user.split(' ').map((w) => w[0]).join('').slice(0, 2)}
               </div>
@@ -346,8 +320,8 @@ function LiveBetFeed({ fixture }) {
                 <p className="text-xs text-gray-300 leading-relaxed">
                   <span className="font-medium text-white">{item.user}</span>{' '}
                   placed{' '}
-                  <span className="font-mono font-medium" style={{ color: '#ffb800' }}>
-                    £{item.stake}
+                  <span className="font-mono font-medium" style={{ color: '#5B6EF5' }}>
+                    {'\u00A3'}{item.stake}
                   </span>{' '}
                   on{' '}
                   <span className="font-medium text-gray-200">{item.outcome}</span>{' '}
@@ -357,7 +331,7 @@ function LiveBetFeed({ fixture }) {
                   {item.stake >= HIGH_ROLLER_STAKE_THRESHOLD && (
                     <span
                       className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                      style={{ backgroundColor: 'rgba(255,184,0,0.15)', color: '#ffb800' }}
+                      style={{ backgroundColor: 'rgba(91,110,245,0.15)', color: '#5B6EF5' }}
                     >
                       HIGH ROLLER
                     </span>
@@ -375,13 +349,11 @@ function LiveBetFeed({ fixture }) {
   );
 }
 
-// ─── MatchStats ─────────────────────────────────────────────────────────────
-// Horizontal stat bars for possession, shots, corners, etc.
+// -- MatchStats --------------------------------------------------------------
 
 function MatchStats({ stats, homeTeam, awayTeam }) {
   if (!stats) return null;
 
-  // Possession split bar
   function PossessionBar({ home, away }) {
     return (
       <div className="mb-4">
@@ -391,35 +363,22 @@ function MatchStats({ stats, homeTeam, awayTeam }) {
           <span className="font-mono text-sm font-bold text-white">{away}%</span>
         </div>
         <div className="flex h-2 rounded-full overflow-hidden gap-0.5">
-          <div
-            className="h-full rounded-l-full transition-all duration-700"
-            style={{ width: `${home}%`, backgroundColor: '#ffb800' }}
-          />
-          <div
-            className="h-full rounded-r-full transition-all duration-700"
-            style={{ width: `${away}%`, backgroundColor: '#e5302f' }}
-          />
+          <div className="h-full rounded-l-full transition-all duration-700" style={{ width: `${home}%`, backgroundColor: '#5B6EF5' }} />
+          <div className="h-full rounded-r-full transition-all duration-700" style={{ width: `${away}%`, backgroundColor: '#e5302f' }} />
         </div>
       </div>
     );
   }
 
-  // Single stat row: value | label | value
   function StatRow({ label, home, away }) {
     const total = home + away || 1;
     return (
-      <div className="flex items-center gap-3 py-2" style={{ borderBottom: '1px solid rgba(45,63,82,0.3)' }}>
+      <div className="flex items-center gap-3 py-2" style={{ borderBottom: '1px solid rgba(26,34,56,0.3)' }}>
         <span className="font-mono text-sm text-white w-8 text-right">{home}</span>
         <div className="flex-1">
           <div className="flex h-1.5 rounded-full overflow-hidden gap-0.5 mb-1">
-            <div
-              className="h-full rounded-l-full"
-              style={{ width: `${(home / total) * 100}%`, backgroundColor: '#ffb800' }}
-            />
-            <div
-              className="h-full rounded-r-full"
-              style={{ width: `${(away / total) * 100}%`, backgroundColor: '#e5302f' }}
-            />
+            <div className="h-full rounded-l-full" style={{ width: `${(home / total) * 100}%`, backgroundColor: '#5B6EF5' }} />
+            <div className="h-full rounded-r-full" style={{ width: `${(away / total) * 100}%`, backgroundColor: '#e5302f' }} />
           </div>
           <p className="text-[10px] text-gray-500 text-center uppercase tracking-wider">{label}</p>
         </div>
@@ -429,24 +388,19 @@ function MatchStats({ stats, homeTeam, awayTeam }) {
   }
 
   return (
-    <div className="rounded-xl p-4" style={{ backgroundColor: '#1a2332', border: '1px solid #2d3f52' }}>
+    <div className="rounded-xl p-4" style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}>
       <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Match Stats</h3>
-
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-medium text-gray-300">{homeTeam}</span>
         <span className="text-xs font-medium text-gray-300">{awayTeam}</span>
       </div>
-
       <PossessionBar home={stats.possession.home} away={stats.possession.away} />
-
       <StatRow label="Shots" home={stats.shots.home} away={stats.shots.away} />
       <StatRow label="On Target" home={stats.shotsOnTarget.home} away={stats.shotsOnTarget.away} />
       <StatRow label="Corners" home={stats.corners.home} away={stats.corners.away} />
       <StatRow label="Fouls" home={stats.fouls.home} away={stats.fouls.away} />
       <StatRow label="Yellow Cards" home={stats.yellowCards.home} away={stats.yellowCards.away} />
       <StatRow label="Red Cards" home={stats.redCards.home} away={stats.redCards.away} />
-
-      {/* xG if available */}
       {stats.xG && (
         <StatRow label="xG" home={stats.xG.home} away={stats.xG.away} />
       )}
@@ -454,27 +408,25 @@ function MatchStats({ stats, homeTeam, awayTeam }) {
   );
 }
 
-// ─── MatchTimeline ──────────────────────────────────────────────────────────
-// Chronological list of match events (goals, cards, whistles).
+// -- MatchTimeline -----------------------------------------------------------
 
 function MatchTimeline({ events, homeTeam, awayTeam }) {
   if (!events || events.length === 0) return null;
 
   function getEventIcon(type) {
     switch (type) {
-      case 'goal': return '\u26BD';       // football
-      case 'yellow_card': return '\uD83D\uDFE8'; // yellow square
-      case 'red_card': return '\uD83D\uDFE5';    // red square
-      case 'whistle': return '\uD83D\uDD14';     // bell (whistle substitute)
-      case 'chance': return '\uD83C\uDFAF';      // target
+      case 'goal': return '\u26BD';
+      case 'yellow_card': return '\uD83D\uDFE8';
+      case 'red_card': return '\uD83D\uDFE5';
+      case 'whistle': return '\uD83D\uDD14';
+      case 'chance': return '\uD83C\uDFAF';
       default: return '\u26AA';
     }
   }
 
   return (
-    <div className="rounded-xl p-4" style={{ backgroundColor: '#1a2332', border: '1px solid #2d3f52' }}>
+    <div className="rounded-xl p-4" style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}>
       <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Match Timeline</h3>
-
       <div className="space-y-0">
         {events.map((event, i) => {
           const isHome = event.team === 'home';
@@ -485,9 +437,8 @@ function MatchTimeline({ events, homeTeam, awayTeam }) {
             <div
               key={`${event.minute}-${event.type}-${i}`}
               className="flex items-start gap-3 py-2.5"
-              style={{ borderBottom: i < events.length - 1 ? '1px solid rgba(45,63,82,0.3)' : 'none' }}
+              style={{ borderBottom: i < events.length - 1 ? '1px solid rgba(26,34,56,0.3)' : 'none' }}
             >
-              {/* Home side */}
               <div className="flex-1 text-right">
                 {isHome && (
                   <div>
@@ -498,18 +449,14 @@ function MatchTimeline({ events, homeTeam, awayTeam }) {
                   </div>
                 )}
               </div>
-
-              {/* Centre: minute + icon */}
               <div className="flex flex-col items-center shrink-0 w-14">
-                <span className="font-mono text-xs font-bold" style={{ color: isNeutral ? '#94a3b8' : '#ffb800' }}>
+                <span className="font-mono text-xs font-bold" style={{ color: isNeutral ? '#8A97B4' : '#5B6EF5' }}>
                   {event.minute}'
                 </span>
                 <span className="text-base leading-none mt-0.5">
                   {getEventIcon(event.type)}
                 </span>
               </div>
-
-              {/* Away side */}
               <div className="flex-1">
                 {isAway && (
                   <div>
@@ -531,12 +478,12 @@ function MatchTimeline({ events, homeTeam, awayTeam }) {
   );
 }
 
-// ─── MoreMarkets ────────────────────────────────────────────────────────────
-// Collapsible market sections with outcome buttons.
+// -- MoreMarkets -------------------------------------------------------------
 
 function MoreMarkets({ markets, fixture }) {
   const [expandedMarkets, setExpandedMarkets] = useState({});
   const { addSelection, isSelected } = useBetSlip();
+  const { format } = useOddsFormat();
 
   function toggleMarket(marketId) {
     setExpandedMarkets((prev) => ({
@@ -560,8 +507,8 @@ function MoreMarkets({ markets, fixture }) {
   if (!markets || markets.length === 0) return null;
 
   return (
-    <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1a2332', border: '1px solid #2d3f52' }}>
-      <div className="px-4 py-3" style={{ borderBottom: '1px solid #2d3f52' }}>
+    <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}>
+      <div className="px-4 py-3" style={{ borderBottom: '1px solid #1A2238' }}>
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">More Markets</h3>
       </div>
 
@@ -570,11 +517,11 @@ function MoreMarkets({ markets, fixture }) {
         const isSettled = market.settled === true;
 
         return (
-          <div key={market.id} style={{ borderBottom: '1px solid rgba(45,63,82,0.3)' }}>
+          <div key={market.id} style={{ borderBottom: '1px solid rgba(26,34,56,0.3)' }}>
             <button
               onClick={() => toggleMarket(market.id)}
               className="w-full flex items-center justify-between px-4 py-3 transition-colors"
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(36,48,64,0.3)'}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(22,30,46,0.3)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               <div className="flex items-center gap-2">
@@ -601,7 +548,6 @@ function MoreMarkets({ markets, fixture }) {
                     const compositeId = `${market.id}-${outcome.id}`;
                     const selected = isSelected(fixture.id, compositeId);
                     const textColour = getProbabilityTextColour(outcome.probability);
-                    // Don't allow selection on settled outcomes or those with null odds
                     const disabled = isSettled || outcome.decimalOdds === null;
 
                     return (
@@ -613,41 +559,41 @@ function MoreMarkets({ markets, fixture }) {
                         style={
                           disabled
                             ? {
-                                border: '1px solid rgba(45,63,82,0.3)',
-                                backgroundColor: 'rgba(17,24,39,0.5)',
+                                border: '1px solid rgba(26,34,56,0.3)',
+                                backgroundColor: 'rgba(8,12,20,0.5)',
                                 opacity: 0.5,
                                 cursor: 'not-allowed',
                               }
                             : selected
                               ? {
-                                  border: '1px solid #ffb800',
-                                  backgroundColor: 'rgba(255,184,0,0.1)',
+                                  border: '1px solid #5B6EF5',
+                                  backgroundColor: 'rgba(91,110,245,0.1)',
                                   cursor: 'pointer',
                                 }
                               : {
-                                  border: '1px solid rgba(45,63,82,0.5)',
-                                  backgroundColor: 'rgba(36,48,64,0.5)',
+                                  border: '1px solid rgba(26,34,56,0.5)',
+                                  backgroundColor: 'rgba(22,30,46,0.5)',
                                   cursor: 'pointer',
                                 }
                         }
                         onMouseEnter={(e) => {
                           if (!disabled && !selected) {
-                            e.currentTarget.style.backgroundColor = '#243040';
-                            e.currentTarget.style.borderColor = '#3d5068';
+                            e.currentTarget.style.backgroundColor = '#161E2E';
+                            e.currentTarget.style.borderColor = '#252F45';
                           }
                         }}
                         onMouseLeave={(e) => {
                           if (!disabled && !selected) {
-                            e.currentTarget.style.backgroundColor = 'rgba(36,48,64,0.5)';
-                            e.currentTarget.style.borderColor = 'rgba(45,63,82,0.5)';
+                            e.currentTarget.style.backgroundColor = 'rgba(22,30,46,0.5)';
+                            e.currentTarget.style.borderColor = 'rgba(26,34,56,0.5)';
                           }
                         }}
                       >
                         <span className="text-xs text-gray-400 text-center">{outcome.label}</span>
                         <span className={`font-mono text-lg font-bold ${textColour}`}>
-                          {Math.round(outcome.probability)}%
+                          {formatOdds(outcome.probability, format)}
                         </span>
-                        {outcome.decimalOdds !== null && (
+                        {outcome.decimalOdds !== null && format !== 'decimal' && (
                           <span className="font-mono text-[10px] text-gray-500">
                             {outcome.decimalOdds.toFixed(2)}
                           </span>
@@ -665,17 +611,15 @@ function MoreMarkets({ markets, fixture }) {
   );
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────
+// -- Main Component ----------------------------------------------------------
 
 export default function MatchDetailView({ fixture, detail, onBack }) {
-  // Fallback: if detail is null we still render what we can from fixture
   const stats = detail?.stats || null;
   const events = detail?.events || [];
   const probabilityHistory = detail?.probabilityHistory || null;
   const markets = detail?.markets || [];
-
-  // Bookmakers array comes from live API data on the fixture itself
   const bookmakers = fixture.bookmakers || [];
+  const { format } = useOddsFormat();
 
   return (
     <div className="animate-fade-in">
@@ -683,9 +627,9 @@ export default function MatchDetailView({ fixture, detail, onBack }) {
       <button
         onClick={onBack}
         className="flex items-center gap-2 mb-4 text-sm font-medium transition-colors"
-        style={{ color: '#ffb800' }}
-        onMouseEnter={(e) => e.currentTarget.style.color = '#ffc933'}
-        onMouseLeave={(e) => e.currentTarget.style.color = '#ffb800'}
+        style={{ color: '#5B6EF5' }}
+        onMouseEnter={(e) => e.currentTarget.style.color = '#7082F8'}
+        onMouseLeave={(e) => e.currentTarget.style.color = '#5B6EF5'}
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Football
@@ -694,15 +638,14 @@ export default function MatchDetailView({ fixture, detail, onBack }) {
       {/* Match header card */}
       <div
         className="rounded-xl overflow-hidden mb-6"
-        style={{ backgroundColor: '#1a2332', border: '1px solid #2d3f52' }}
+        style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}
       >
-        {/* Competition + date + live badge */}
-        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(45,63,82,0.5)' }}>
+        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(26,34,56,0.5)' }}>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
               {fixture.competition}
             </span>
-            <span className="text-gray-600">·</span>
+            <span className="text-gray-600">{'\u00B7'}</span>
             <span className="text-xs text-gray-500">
               {formatMatchDate(fixture.kickoff)}
             </span>
@@ -733,7 +676,6 @@ export default function MatchDetailView({ fixture, detail, onBack }) {
           )}
         </div>
 
-        {/* Score / teams display */}
         <div className="px-6 py-6">
           <div className="flex items-center justify-center gap-6">
             <div className="flex-1 text-right">
@@ -759,23 +701,24 @@ export default function MatchDetailView({ fixture, detail, onBack }) {
             </div>
           </div>
 
-          {/* Venue */}
           {detail && (
             <p className="text-center text-xs text-gray-500 mt-2">
               {detail.venue || ''}
-              {detail.referee && ` · Referee: ${detail.referee}`}
+              {detail.referee && ` \u00B7 Referee: ${detail.referee}`}
             </p>
           )}
         </div>
       </div>
 
-      {/* Match Odds + Live Bet Feed (side by side on desktop) */}
+      {/* Narrative Prompts -- popular bet suggestions */}
+      <NarrativePrompts fixture={fixture} detail={detail} />
+
+      {/* Match Odds + Live Bet Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
-        {/* Match Odds (3 cols on desktop) */}
         <div className="lg:col-span-3">
           <div
             className="rounded-xl p-4"
-            style={{ backgroundColor: '#1a2332', border: '1px solid #2d3f52' }}
+            style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}
           >
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Match Odds</h3>
             <div className="grid grid-cols-3 gap-3">
@@ -786,22 +729,17 @@ export default function MatchDetailView({ fixture, detail, onBack }) {
                     key={outcome.id}
                     className="flex flex-col items-center gap-2 p-4 rounded-lg"
                     style={{
-                      backgroundColor: 'rgba(36,48,64,0.5)',
-                      border: '1px solid rgba(45,63,82,0.5)',
+                      backgroundColor: 'rgba(22,30,46,0.5)',
+                      border: '1px solid rgba(26,34,56,0.5)',
                     }}
                   >
                     <span className="text-xs text-gray-400">{outcome.label}</span>
                     <span className={`font-mono text-2xl font-bold ${textColour}`}>
-                      {Math.round(outcome.probability)}%
+                      {formatOdds(outcome.probability, format)}
                     </span>
                     <div className="w-full">
                       <ProbabilityBar probability={outcome.probability} />
                     </div>
-                    {outcome.decimalOdds != null && (
-                      <span className="font-mono text-xs text-gray-500">
-                        {outcome.decimalOdds.toFixed(2)}
-                      </span>
-                    )}
                   </div>
                 );
               })}
@@ -809,13 +747,11 @@ export default function MatchDetailView({ fixture, detail, onBack }) {
           </div>
         </div>
 
-        {/* Live Bet Feed (2 cols on desktop) */}
         <div className="lg:col-span-2">
           <LiveBetFeed fixture={fixture} />
         </div>
       </div>
 
-      {/* Bookmaker Price Comparison — only shown when live API data has bookmaker breakdown */}
       {bookmakers.length > 0 && (
         <div className="mb-6">
           <BookmakerOddsPanel
@@ -826,10 +762,9 @@ export default function MatchDetailView({ fixture, detail, onBack }) {
         </div>
       )}
 
-      {/* Odds Probability Graph */}
       <div
         className="rounded-xl p-4 mb-6"
-        style={{ backgroundColor: '#1a2332', border: '1px solid #2d3f52' }}
+        style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}
       >
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
           Probability Movement
@@ -843,21 +778,18 @@ export default function MatchDetailView({ fixture, detail, onBack }) {
         />
       </div>
 
-      {/* Match Stats (live only) */}
       {stats && (
         <div className="mb-6">
           <MatchStats stats={stats} homeTeam={fixture.homeTeam} awayTeam={fixture.awayTeam} />
         </div>
       )}
 
-      {/* Match Timeline (live only) */}
       {events.length > 0 && (
         <div className="mb-6">
           <MatchTimeline events={events} homeTeam={fixture.homeTeam} awayTeam={fixture.awayTeam} />
         </div>
       )}
 
-      {/* More Markets */}
       {markets.length > 0 && (
         <div className="mb-6">
           <MoreMarkets markets={markets} fixture={fixture} />
