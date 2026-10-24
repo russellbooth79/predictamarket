@@ -2,7 +2,7 @@
  * App.jsx — PredictaMarket v4
  *
  * Navigation model:
- *   activeView: 'home' | 'live' | 'markets' | 'account'
+ *   activeView: 'home' | 'live' | 'markets' | 'explore' | 'casino' | 'account'
  *   activeSport: 'football' | 'horseracing' | 'tennis' | 'boxing' | 'nfl' | 'nba'
  *   mobileSlipOpen: boolean (lifted from PositionBuilder)
  *
@@ -17,7 +17,7 @@
  * Sport nav pills (mobile) only visible when activeView === 'home'.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { OddsFormatProvider } from './context/OddsFormatContext.jsx';
 import { BetSlipProvider, useBetSlip } from './context/BetSlipContext.jsx';
 import { UserProvider, useUser } from './context/UserContext.jsx';
@@ -31,6 +31,12 @@ import {
   useNbaOdds,
   useHorseRacingOdds,
 } from './hooks/useOdds.js';
+import { GamificationProvider } from './context/GamificationContext.jsx';
+import SwipeFeed from './components/SwipeFeed.jsx';
+import DailyChallengeCard from './components/DailyChallengeCard.jsx';
+import PredictionFeed from './components/PredictionFeed.jsx';
+import CasinoLobby from './components/CasinoLobby.jsx';
+import { useIsMobile } from './hooks/useIsMobile.js';
 import TopBar from './components/TopBar.jsx';
 import SportNav from './components/SportNav.jsx';
 import EventCard from './components/EventCard.jsx';
@@ -141,6 +147,13 @@ function getLiveLabel(fixture) {
     return `${(fixture.player1?.name || fixture.homeTeam).split(' ').pop()} vs ${(fixture.player2?.name || fixture.awayTeam).split(' ').pop()}`;
   }
   return `${(fixture.homeTeam || '').split(' ').pop()} vs ${(fixture.awayTeam || '').split(' ').pop()}`;
+}
+
+function getTimeOfDayBias() {
+  const h = new Date().getHours();
+  if (h >= 22 || h < 5) return 'casino';
+  if (h >= 18) return 'evening';
+  return 'sports';
 }
 
 function formatTime(iso) {
@@ -462,10 +475,10 @@ function HorseRacingEmpty() {
 function MobileBottomNav({ activeTab, onTabChange, betSlipCount }) {
   const leftTabs  = [
     { id: 'home',    label: 'Home',    Icon: Home },
-    { id: 'live',    label: 'Live',    Icon: Zap },
+    { id: 'explore', label: 'Explore', Icon: Zap },
   ];
   const rightTabs = [
-    { id: 'markets', label: 'Markets', Icon: BarChart3 },
+    { id: 'casino',  label: 'Casino',  Icon: Star },
     { id: 'account', label: 'Account', Icon: User },
   ];
 
@@ -589,6 +602,12 @@ function AppContent() {
   const [mobileSlipOpen, setMobileSlipOpen] = useState(false);
   const [myBetsOpen, setMyBetsOpen] = useState(false);
   const [selectedFixture, setSelectedFixture] = useState(null);
+  const isMobile = useIsMobile();
+
+  // Scroll to top when active view changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeView]);
 
   // ── Data hooks ──────────────────────────────────────────────────────────────
   const {
@@ -661,6 +680,8 @@ function AppContent() {
     setMobileSlipOpen(false);
     setActiveView(tabId);
     if (tabId === 'home') setSelectedFixture(null);
+    // Scroll to top on tab change
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
   function handleMarketsSelectSport(sport) {
@@ -922,6 +943,12 @@ function AppContent() {
             <AccountView onOpenMyBets={() => setMyBetsOpen(true)} />
           )}
 
+          {/* ── EXPLORE VIEW ──────────────────────────────────────────────── */}
+          {activeView === 'explore' && <PredictionFeed />}
+
+          {/* ── CASINO VIEW ───────────────────────────────────────────────── */}
+          {activeView === 'casino' && <CasinoLobby />}
+
           {/* ── HOME VIEW ─────────────────────────────────────────────────── */}
           {activeView === 'home' && (
             <>
@@ -974,18 +1001,62 @@ function AppContent() {
 
                   {/* ── Sport feeds ─────────────────────────────────────── */}
 
-                  {activeSport === 'football' && (
-                    <div className="space-y-4">
-                      {footballFixturesLive.map((fixture, i) => (
-                        <EventCard
-                          key={fixture.id}
-                          fixture={fixture}
-                          index={i}
-                          onViewMatch={f => setSelectedFixture(f)}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  {activeSport === 'football' && (() => {
+                    const bias = getTimeOfDayBias();
+                    const casinoCta = (
+                      <button
+                        key="casino-cta"
+                        onClick={() => { setActiveView('casino'); window.scrollTo({ top: 0, behavior: 'instant' }); }}
+                        className="w-full rounded-2xl overflow-hidden text-left"
+                        style={{
+                          background: bias === 'casino'
+                            ? 'linear-gradient(135deg, rgba(108,99,255,0.2) 0%, rgba(9,1,30,0.95) 100%)'
+                            : 'rgba(10,14,28,0.8)',
+                          border: '1px solid rgba(108,99,255,0.25)',
+                        }}
+                      >
+                        <div className="flex items-center gap-4 px-4 py-3.5">
+                          <span className="text-3xl">{bias === 'casino' ? '🌙' : bias === 'evening' ? '🎰' : '🎲'}</span>
+                          <div className="flex-1">
+                            <p className="text-sm font-black font-display" style={{ color: '#F0F6FF' }}>
+                              {bias === 'casino' ? 'Night Sessions Live' : bias === 'evening' ? 'Evening Casino Bonus' : 'Casino'}
+                            </p>
+                            <p className="text-xs" style={{ color: '#9B8FFF' }}>
+                              {bias === 'casino' ? 'Tables are hot right now' : bias === 'evening' ? '50 free spins waiting' : 'Live tables · Slots · Crash games'}
+                            </p>
+                          </div>
+                          <div
+                            className="px-3 py-1.5 rounded-full text-xs font-black"
+                            style={{ background: 'linear-gradient(135deg, #6C63FF, #9B5DE5)', color: '#F0F6FF' }}
+                          >
+                            Play
+                          </div>
+                        </div>
+                      </button>
+                    );
+
+                    const cards = footballFixturesLive.map((fixture, i) => (
+                      <EventCard
+                        key={fixture.id}
+                        fixture={fixture}
+                        index={i}
+                        hero={isMobile}
+                        onViewMatch={f => setSelectedFixture(f)}
+                      />
+                    ));
+
+                    // Inject DailyChallengeCard at position 1 and casino CTA at position 3
+                    if (cards.length >= 1) {
+                      cards.splice(1, 0, <DailyChallengeCard key="daily-challenge" index={0} />);
+                    }
+                    if (cards.length >= 4) {
+                      cards.splice(bias === 'casino' ? 0 : cards.length, 0, casinoCta);
+                    } else {
+                      cards.push(casinoCta);
+                    }
+
+                    return <SwipeFeed>{cards}</SwipeFeed>;
+                  })()}
 
                   {activeSport === 'horseracing' && (
                     horseRacingOdds.length > 0 ? (
@@ -1078,7 +1149,9 @@ function App() {
     <OddsFormatProvider>
       <UserProvider>
         <BetSlipProvider>
-          <AppContent />
+          <GamificationProvider>
+            <AppContent />
+          </GamificationProvider>
         </BetSlipProvider>
       </UserProvider>
     </OddsFormatProvider>

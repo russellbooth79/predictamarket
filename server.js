@@ -1,12 +1,17 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Anthropic from '@anthropic-ai/sdk';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
+app.use(express.json());
+
 const PORT = process.env.PORT || 3000;
 const ODDS_API_KEY = process.env.ODDS_API_KEY || '';
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
 const ODDS_API_BASE = 'https://api.the-odds-api.com/v4';
 
 // ── In-memory cache ──────────────────────────────────────────────────────────
@@ -265,6 +270,46 @@ async function fetchSportOdds(req, res, { sportKey, cacheKey, transformFn, trans
     res.status(500).json({ error: err.message });
   }
 }
+
+// ── AI Bet Builder ────────────────────────────────────────────────────────────
+
+app.post('/api/ai-bet', async (req, res) => {
+  const { message } = req.body || {};
+  if (!message) return res.status(400).json({ error: 'message required' });
+
+  if (!anthropic) {
+    return res.status(503).json({ error: 'AI not configured' });
+  }
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 512,
+      system: `You are a sports betting assistant for PredictaMarket. Return ONLY a JSON object with these fields:
+{
+  "fixture_id": "ai-<short-alphanumeric-id>",
+  "eventName": "Home Team vs Away Team",
+  "market": "Market type (e.g. Match Result, Both Teams to Score, Over/Under 2.5)",
+  "selection": "Selection label",
+  "odds": "X.XX",
+  "probability": <integer 5-90>,
+  "reasoning": "One or two sentences explaining the pick.",
+  "confidence": "high" | "medium" | "low"
+}
+No other text. Only valid JSON.`,
+      messages: [{ role: 'user', content: message }],
+    });
+
+    const text = response.content[0]?.text || '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON in response');
+    const suggestion = JSON.parse(jsonMatch[0]);
+    res.json(suggestion);
+  } catch (err) {
+    console.error('AI bet error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ── API Routes ────────────────────────────────────────────────────────────────
 

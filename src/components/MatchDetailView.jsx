@@ -1,263 +1,564 @@
 /**
- * MatchDetailView.jsx
+ * MatchDetailView.jsx — PredictaMarket v4
  *
- * Full-page match detail view for football fixtures. Replaces the event
- * card feed when a user clicks "View Match" on an EventCard.
- *
- * Sections (top to bottom):
- * 1. Back navigation + match header (competition, teams, score, live badge)
- * 2. NarrativePrompts (popular bet suggestions)
- * 3. Match Odds (3-col) + Live Bet Feed (side by side on desktop)
- * 4. Bookmaker Price Comparison (Oddschecker-style table) -- live data only
- * 5. Odds Probability Graph (full width SVG)
- * 6. Match Stats (horizontal bars -- live/completed only)
- * 7. Match Timeline (chronological events -- live/completed only)
- * 8. More Markets (collapsible sections)
- *
- * PredictaMarket v3 palette: electric indigo accent, deep navy surfaces.
+ * Tabbed match centre: Overview | Markets | Live Feed | Timeline
+ * Full v4 dark sport-futurism palette — no legacy v3 greys.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, ChevronDown, ChevronUp, TrendingUp, Users, BarChart3, Clock } from 'lucide-react';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { useOddsFormat } from '../context/OddsFormatContext.jsx';
 import { formatOdds } from '../utils/oddsFormatter.js';
-import { getProbabilityTextColour, getProbabilityHex } from '../data/oddsUtils.js';
+import { getProbabilityTextColour } from '../data/oddsUtils.js';
 import { generateBetActivity, initialBetActivity, FEED_POLL_INTERVAL_MS, HIGH_ROLLER_STAKE_THRESHOLD } from '../data/betActivity.js';
-import ProbabilityBar from './ProbabilityBar.jsx';
-import BookmakerOddsPanel from './BookmakerOddsPanel.jsx';
 import NarrativePrompts from './NarrativePrompts.jsx';
+import BookmakerOddsPanel from './BookmakerOddsPanel.jsx';
 
-// -- Helper: format date for the match header --------------------------------
+// ── Palette ───────────────────────────────────────────────────────────────────
+
+const C = {
+  bg: 'rgba(10,14,28,0.9)',
+  border: 'rgba(108,99,255,0.18)',
+  borderFaint: 'rgba(255,255,255,0.06)',
+  primary: '#6C63FF',
+  text: '#F0F6FF',
+  textSub: '#7B8CAA',
+  textMuted: '#3A4560',
+  live: '#FF3366',
+  green: '#00F5A0',
+  home: '#6C63FF',
+  away: '#FF3366',
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatMatchDate(kickoff) {
   const date = new Date(kickoff);
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-
-  if (date.toDateString() === today.toDateString()) {
-    return 'Today';
-  }
-  if (date.toDateString() === tomorrow.toDateString()) {
-    return 'Tomorrow';
-  }
+  if (date.toDateString() === today.toDateString()) return 'Today';
+  if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
   return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-// -- Helper: relative time display for bet feed ------------------------------
-
-function timeAgo(timestamp) {
-  const now = Date.now();
-  const ts = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
-  const diffSec = Math.floor((now - ts) / 1000);
-
-  if (diffSec < 10) return 'just now';
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  return `${Math.floor(diffMin / 60)}h ago`;
+function timeAgo(ts) {
+  const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+  if (diff < 10) return 'just now';
+  if (diff < 60) return `${diff}s ago`;
+  const m = Math.floor(diff / 60);
+  return m < 60 ? `${m}m ago` : `${Math.floor(m / 60)}h ago`;
 }
 
-// -- Bookmaker colour palette for graph secondary lines ----------------------
-const BOOKMAKER_LINE_COLOURS = [
-  '#6b7280', '#7c8594', '#5b6370', '#8b95a3',
+function simpleHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) { h = (h * 31 + str.charCodeAt(i)) >>> 0; }
+  return h;
+}
+
+const TEAM_ACCENTS = ['#6C63FF', '#FF3366', '#00F5A0', '#00D4FF', '#FF9500', '#9B5DE5', '#FF6B35'];
+
+// ── Tab definitions ───────────────────────────────────────────────────────────
+
+const TABS = [
+  { id: 'overview',  label: 'Overview',  Icon: BarChart3 },
+  { id: 'markets',   label: 'Markets',   Icon: TrendingUp },
+  { id: 'feed',      label: 'Live Feed', Icon: Users },
+  { id: 'timeline',  label: 'Timeline',  Icon: Clock },
 ];
 
-// -- OddsGraph ---------------------------------------------------------------
+// ── Match header ──────────────────────────────────────────────────────────────
 
-function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
-  const [hoverIndex, setHoverIndex] = useState(null);
+function MatchHeader({ fixture, detail }) {
+  const homeAccent = TEAM_ACCENTS[simpleHash(fixture.homeTeam) % TEAM_ACCENTS.length];
+  const awayAccent = TEAM_ACCENTS[simpleHash(fixture.awayTeam) % TEAM_ACCENTS.length];
+  const homeInitials = fixture.homeTeam.split(' ').map(w => w[0]).join('').slice(0, 3);
+  const awayInitials = fixture.awayTeam.split(' ').map(w => w[0]).join('').slice(0, 3);
 
-  if (!history || history.length < 2) {
+  return (
+    <div
+      className="rounded-2xl overflow-hidden mb-4"
+      style={{ background: C.bg, border: `1px solid ${C.border}` }}
+    >
+      {/* Top accent bar */}
+      <div
+        className="h-0.5 w-full"
+        style={{ background: `linear-gradient(90deg, ${homeAccent}, ${awayAccent})` }}
+      />
+
+      {/* Competition + live badge */}
+      <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: `1px solid ${C.borderFaint}` }}>
+        <div className="flex items-center gap-2">
+          <span
+            className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+            style={{ background: 'rgba(108,99,255,0.12)', color: '#9B8FFF', border: `1px solid ${C.border}` }}
+          >
+            {fixture.competitionShort || fixture.competition}
+          </span>
+          <span className="text-xs" style={{ color: C.textSub }}>
+            {formatMatchDate(fixture.kickoff)}
+          </span>
+          {detail?.venue && (
+            <span className="text-xs hidden sm:inline" style={{ color: C.textMuted }}>· {detail.venue}</span>
+          )}
+        </div>
+
+        {fixture.isLive && (
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+            style={{ background: 'rgba(255,51,102,0.1)', border: '1px solid rgba(255,51,102,0.2)' }}
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: C.live }} />
+              <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: C.live }} />
+            </span>
+            <span className="text-xs font-black" style={{ color: C.live }}>LIVE {fixture.liveMinute}'</span>
+          </div>
+        )}
+      </div>
+
+      {/* Teams + score */}
+      <div className="px-5 py-5">
+        <div className="flex items-center gap-4">
+          {/* Home */}
+          <div className="flex-1 flex flex-col items-center gap-2">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center text-sm font-black text-white"
+              style={{ background: `linear-gradient(135deg, ${homeAccent}, rgba(0,0,0,0.4))`, boxShadow: `0 4px 16px ${homeAccent}44` }}
+            >
+              {homeInitials}
+            </div>
+            <p className="text-sm font-black font-display text-center leading-tight" style={{ color: C.text }}>{fixture.homeTeam}</p>
+          </div>
+
+          {/* Score / VS */}
+          <div className="flex flex-col items-center gap-1 shrink-0">
+            {fixture.isLive && fixture.liveScore ? (
+              <div className="flex items-center gap-2">
+                <span
+                  className="font-mono text-4xl font-black"
+                  style={{
+                    background: `linear-gradient(135deg, ${homeAccent}, ${awayAccent})`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  {fixture.liveScore.home}
+                </span>
+                <span className="text-xl font-bold" style={{ color: C.textMuted }}>–</span>
+                <span
+                  className="font-mono text-4xl font-black"
+                  style={{
+                    background: `linear-gradient(135deg, ${homeAccent}, ${awayAccent})`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  {fixture.liveScore.away}
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <span className="text-2xl font-black font-display" style={{ color: C.textMuted }}>vs</span>
+                <span className="text-xs" style={{ color: C.textMuted }}>
+                  {new Date(fixture.kickoff).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Away */}
+          <div className="flex-1 flex flex-col items-center gap-2">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center text-sm font-black text-white"
+              style={{ background: `linear-gradient(135deg, ${awayAccent}, rgba(0,0,0,0.4))`, boxShadow: `0 4px 16px ${awayAccent}44` }}
+            >
+              {awayInitials}
+            </div>
+            <p className="text-sm font-black font-display text-center leading-tight" style={{ color: C.text }}>{fixture.awayTeam}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Overview Tab ──────────────────────────────────────────────────────────────
+
+function OverviewTab({ fixture, detail }) {
+  const { addSelection, isSelected } = useBetSlip();
+  const { format } = useOddsFormat();
+
+  function handleOutcome(outcome) {
+    addSelection({
+      eventId: fixture.id,
+      eventName: `${fixture.homeTeam} vs ${fixture.awayTeam}`,
+      outcomeId: outcome.id,
+      outcomeName: outcome.label,
+      probability: outcome.probability,
+      decimalOdds: 1 / (outcome.probability / 100),
+      sport: 'football',
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <NarrativePrompts fixture={fixture} detail={detail} />
+
+      {/* Match odds */}
+      <div
+        className="rounded-2xl p-4"
+        style={{ background: C.bg, border: `1px solid ${C.border}` }}
+      >
+        <p className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: '#9B8FFF' }}>Match Result</p>
+        <div className="grid grid-cols-3 gap-2">
+          {fixture.outcomes.map(outcome => {
+            const selected = isSelected(fixture.id, outcome.id);
+            return (
+              <button
+                key={outcome.id}
+                onClick={() => handleOutcome(outcome)}
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all duration-200"
+                style={{
+                  background: selected ? 'rgba(108,99,255,0.15)' : 'rgba(255,255,255,0.03)',
+                  border: selected ? '1px solid rgba(108,99,255,0.5)' : '1px solid rgba(255,255,255,0.07)',
+                  boxShadow: selected ? '0 0 16px rgba(108,99,255,0.2)' : 'none',
+                }}
+              >
+                <span className="text-xs font-semibold" style={{ color: C.textSub }}>{outcome.label}</span>
+                <span
+                  className="font-mono text-xl font-black"
+                  style={{
+                    background: selected ? 'linear-gradient(135deg, #6C63FF, #B06FFF)' : 'none',
+                    WebkitBackgroundClip: selected ? 'text' : 'unset',
+                    WebkitTextFillColor: selected ? 'transparent' : C.text,
+                    backgroundClip: selected ? 'text' : 'unset',
+                    color: selected ? 'transparent' : C.text,
+                  }}
+                >
+                  {formatOdds(outcome.probability, format)}
+                </span>
+                <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${outcome.probability}%`,
+                      background: `linear-gradient(90deg, ${C.primary}, #B06FFF)`,
+                    }}
+                  />
+                </div>
+                <span className="text-[10px] font-mono" style={{ color: C.textMuted }}>{outcome.probability}%</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Probability graph */}
+      {detail?.probabilityHistory && detail.probabilityHistory.length >= 2 && (
+        <OddsGraph
+          history={detail.probabilityHistory}
+          isLive={fixture.isLive}
+          homeTeam={fixture.homeTeam}
+          awayTeam={fixture.awayTeam}
+        />
+      )}
+
+      {/* Stats summary */}
+      {detail?.stats && (
+        <MatchStats stats={detail.stats} homeTeam={fixture.homeTeam} awayTeam={fixture.awayTeam} />
+      )}
+    </div>
+  );
+}
+
+// ── Markets Tab ───────────────────────────────────────────────────────────────
+
+function MarketsTab({ fixture, detail }) {
+  const bookmakers = fixture.bookmakers || [];
+  const markets = detail?.markets || [];
+
+  return (
+    <div className="space-y-4">
+      {bookmakers.length > 0 && (
+        <BookmakerOddsPanel
+          bookmakers={bookmakers}
+          homeTeam={fixture.homeTeam}
+          awayTeam={fixture.awayTeam}
+        />
+      )}
+      {markets.length > 0 && (
+        <MoreMarkets markets={markets} fixture={fixture} />
+      )}
+      {bookmakers.length === 0 && markets.length === 0 && (
+        <div
+          className="rounded-2xl p-8 flex flex-col items-center text-center"
+          style={{ background: C.bg, border: `1px solid ${C.border}` }}
+        >
+          <TrendingUp className="w-8 h-8 mb-3" style={{ color: C.textMuted }} />
+          <p className="text-sm font-bold" style={{ color: C.textSub }}>No extra markets for this fixture</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Live Bet Feed Tab ─────────────────────────────────────────────────────────
+
+function FeedTab({ fixture }) {
+  const [items, setItems] = useState(() => {
+    const forFixture = initialBetActivity.filter(b => b.fixtureId === fixture.id);
+    const others = initialBetActivity.filter(b => b.fixtureId !== fixture.id).slice(0, 15 - forFixture.length);
+    return [...forFixture, ...others].slice(0, 15);
+  });
+  const [paused, setPaused] = useState(false);
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    if (paused) return;
+    intervalRef.current = setInterval(() => {
+      setItems(prev => [generateBetActivity(fixture), ...prev].slice(0, 15));
+    }, FEED_POLL_INTERVAL_MS + Math.random() * 2000);
+    return () => clearInterval(intervalRef.current);
+  }, [fixture, paused]);
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{ background: C.bg, border: `1px solid ${C.border}` }}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: `1px solid ${C.borderFaint}` }}>
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: C.live }} />
+          <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: C.live }} />
+        </span>
+        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#9B8FFF' }}>Live Bet Feed</p>
+      </div>
+
+      <div className="divide-y" style={{ '--tw-divide-color': C.borderFaint }}>
+        {items.map((item, idx) => (
+          <div
+            key={item.id}
+            className="px-4 py-3 transition-all duration-300"
+            style={{ animation: idx === 0 ? 'slide-in-top 0.3s ease-out' : undefined }}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-[11px] font-black shrink-0"
+                style={{ background: 'rgba(108,99,255,0.12)', color: '#9B8FFF', border: `1px solid ${C.border}` }}
+              >
+                {item.user.split(' ').map(w => w[0]).join('').slice(0, 2)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs leading-relaxed" style={{ color: C.textSub }}>
+                  <span className="font-bold" style={{ color: C.text }}>{item.user}</span>
+                  {' placed '}
+                  <span className="font-mono font-black" style={{ color: '#9B8FFF' }}>£{item.stake}</span>
+                  {' on '}
+                  <span className="font-semibold" style={{ color: C.text }}>{item.outcome}</span>
+                  {' '}
+                  <span style={{ color: C.textMuted }}>({item.probability}%)</span>
+                  {item.stake >= HIGH_ROLLER_STAKE_THRESHOLD && (
+                    <span
+                      className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full font-black"
+                      style={{ background: 'rgba(108,99,255,0.15)', color: '#9B8FFF', border: `1px solid ${C.border}` }}
+                    >
+                      HIGH ROLLER
+                    </span>
+                  )}
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: C.textMuted }}>{timeAgo(item.timestamp)}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Timeline Tab ──────────────────────────────────────────────────────────────
+
+function TimelineTab({ events, homeTeam, awayTeam }) {
+  if (!events || events.length === 0) {
     return (
-      <div className="flex items-center justify-center py-12 text-gray-500 text-sm">
-        No probability history available
+      <div
+        className="rounded-2xl p-8 flex flex-col items-center text-center"
+        style={{ background: C.bg, border: `1px solid ${C.border}` }}
+      >
+        <Clock className="w-8 h-8 mb-3" style={{ color: C.textMuted }} />
+        <p className="text-sm font-bold" style={{ color: C.textSub }}>No timeline events yet</p>
+        <p className="text-xs mt-1" style={{ color: C.textMuted }}>Events appear here during live play</p>
       </div>
     );
   }
 
-  const W = 800;
-  const H = 220;
-  const PAD_TOP = 20;
-  const PAD_BOTTOM = 30;
-  const PAD_LEFT = 40;
-  const PAD_RIGHT = 20;
-  const CHART_W = W - PAD_LEFT - PAD_RIGHT;
-  const CHART_H = H - PAD_TOP - PAD_BOTTOM;
+  function getEventIcon(type) {
+    switch (type) {
+      case 'goal': return '⚽';
+      case 'yellow_card': return '🟨';
+      case 'red_card': return '🟥';
+      case 'whistle': return '🔔';
+      case 'chance': return '🎯';
+      default: return '⚪';
+    }
+  }
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{ background: C.bg, border: `1px solid ${C.border}` }}
+    >
+      <div className="px-4 py-3" style={{ borderBottom: `1px solid ${C.borderFaint}` }}>
+        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#9B8FFF' }}>Match Timeline</p>
+      </div>
+      <div>
+        {events.map((event, i) => {
+          const isHome = event.team === 'home';
+          const isAway = event.team === 'away';
+          const isNeutral = !event.team;
+          return (
+            <div
+              key={`${event.minute}-${event.type}-${i}`}
+              className="flex items-start gap-3 px-4 py-3"
+              style={{ borderBottom: i < events.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}
+            >
+              <div className="flex-1 text-right">
+                {isHome && (
+                  <div>
+                    <span className="text-sm font-bold" style={{ color: C.text }}>{event.player}</span>
+                    {event.assist && (
+                      <span className="text-xs block" style={{ color: C.textSub }}>Assist: {event.assist}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col items-center shrink-0 w-12">
+                <span className="font-mono text-xs font-black" style={{ color: isNeutral ? C.textSub : C.primary }}>
+                  {event.minute}'
+                </span>
+                <span className="text-base leading-none mt-0.5">{getEventIcon(event.type)}</span>
+              </div>
+              <div className="flex-1">
+                {isAway && (
+                  <div>
+                    <span className="text-sm font-bold" style={{ color: C.text }}>{event.player}</span>
+                    {event.assist && (
+                      <span className="text-xs block" style={{ color: C.textSub }}>Assist: {event.assist}</span>
+                    )}
+                  </div>
+                )}
+                {isNeutral && (
+                  <span className="text-xs italic" style={{ color: C.textSub }}>{event.description}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Odds Graph ────────────────────────────────────────────────────────────────
+
+function OddsGraph({ history, isLive, homeTeam, awayTeam }) {
+  const [hoverIdx, setHoverIdx] = useState(null);
+
+  if (!history || history.length < 2) return null;
+
+  const W = 800, H = 200, PAD = { top: 16, bottom: 28, left: 36, right: 16 };
+  const CW = W - PAD.left - PAD.right;
+  const CH = H - PAD.top - PAD.bottom;
 
   const usesMinute = history[0].minute !== undefined;
-  const getX = (point) => usesMinute ? point.minute : (24 - (point.hoursAgo || 0));
-  const xValues = history.map(getX);
-  const xMin = Math.min(...xValues);
-  const xMax = Math.max(...xValues);
-  const xRange = xMax - xMin || 1;
+  const getX = p => usesMinute ? p.minute : (24 - (p.hoursAgo || 0));
+  const xVals = history.map(getX);
+  const xMin = Math.min(...xVals), xMax = Math.max(...xVals), xRange = xMax - xMin || 1;
 
-  function toSvgX(val) {
-    return PAD_LEFT + ((val - xMin) / xRange) * CHART_W;
-  }
-  function toSvgY(prob) {
-    return PAD_TOP + CHART_H - (prob / 100) * CHART_H;
-  }
+  const toSvgX = v => PAD.left + ((v - xMin) / xRange) * CW;
+  const toSvgY = p => PAD.top + CH - (p / 100) * CH;
 
   function buildPath(key) {
-    const points = history.map((p) => ({ x: toSvgX(getX(p)), y: toSvgY(p[key]) }));
-    if (points.length < 2) return '';
-
-    let d = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 1; i < points.length; i++) {
-      const prev = points[i - 1];
-      const curr = points[i];
+    const pts = history.map(p => ({ x: toSvgX(getX(p)), y: toSvgY(p[key]) }));
+    if (pts.length < 2) return '';
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) {
+      const prev = pts[i - 1], curr = pts[i];
       const cpx = (curr.x - prev.x) / 3;
       d += ` C ${prev.x + cpx} ${prev.y}, ${curr.x - cpx} ${curr.y}, ${curr.x} ${curr.y}`;
     }
     return d;
   }
 
-  const homePath = buildPath('home');
-  const drawPath = buildPath('draw');
-  const awayPath = buildPath('away');
-
-  const xLabels = usesMinute
-    ? [0, 15, 30, 45, 60, 75, 90].filter((m) => m >= xMin && m <= xMax + 5)
-    : [0, 4, 8, 12, 16, 20, 24];
-
-  const yLabels = [0, 25, 50, 75, 100];
-
-  function handleMouseMove(e) {
-    const svg = e.currentTarget;
-    const rect = svg.getBoundingClientRect();
-    const mouseX = ((e.clientX - rect.left) / rect.width) * W;
-    const chartX = mouseX - PAD_LEFT;
-    const fraction = chartX / CHART_W;
-    const idx = Math.round(fraction * (history.length - 1));
-    setHoverIndex(Math.max(0, Math.min(history.length - 1, idx)));
-  }
-
-  const hoverPoint = hoverIndex !== null ? history[hoverIndex] : null;
-
-  const bookmakerLines = bookmakers && bookmakers.length > 0
-    ? bookmakers.slice(0, 4)
-    : [];
+  const hoverPoint = hoverIdx !== null ? history[hoverIdx] : null;
 
   return (
-    <div className="w-full">
-      {/* Legend */}
-      <div className="flex items-center gap-6 mb-3 px-1 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#5B6EF5' }} />
-          <span className="text-xs text-gray-400">{homeTeam}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#94a3b8' }} />
-          <span className="text-xs text-gray-400">Draw</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#e5302f' }} />
-          <span className="text-xs text-gray-400">{awayTeam}</span>
-        </div>
-        {bookmakerLines.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#6b7280', opacity: 0.4 }} />
-            <span className="text-xs text-gray-500">Bookmakers</span>
+    <div
+      className="rounded-2xl p-4"
+      style={{ background: C.bg, border: `1px solid ${C.border}` }}
+    >
+      <p className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: '#9B8FFF' }}>Probability Movement</p>
+
+      <div className="flex items-center gap-5 mb-3 flex-wrap">
+        {[
+          { label: homeTeam, color: '#6C63FF' },
+          { label: 'Draw', color: '#7B8CAA' },
+          { label: awayTeam, color: '#FF3366' },
+        ].map(l => (
+          <div key={l.label} className="flex items-center gap-1.5">
+            <div className="w-3 h-0.5 rounded" style={{ background: l.color }} />
+            <span className="text-xs" style={{ color: C.textSub }}>{l.label}</span>
           </div>
-        )}
+        ))}
       </div>
 
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full"
-        style={{ maxHeight: '240px' }}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => setHoverIndex(null)}
+        style={{ maxHeight: '200px' }}
+        onMouseMove={e => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const fraction = ((e.clientX - rect.left) / rect.width * W - PAD.left) / CW;
+          const idx = Math.round(fraction * (history.length - 1));
+          setHoverIdx(Math.max(0, Math.min(history.length - 1, idx)));
+        }}
+        onMouseLeave={() => setHoverIdx(null)}
       >
-        {yLabels.map((val) => (
-          <g key={`grid-${val}`}>
-            <line
-              x1={PAD_LEFT} y1={toSvgY(val)}
-              x2={W - PAD_RIGHT} y2={toSvgY(val)}
-              stroke="#1A2238" strokeWidth="0.5" strokeDasharray="4 4"
-            />
-            <text
-              x={PAD_LEFT - 6} y={toSvgY(val) + 4}
-              fill="#64748b" fontSize="10" textAnchor="end" fontFamily="JetBrains Mono, monospace"
-            >
+        {[0, 25, 50, 75, 100].map(val => (
+          <g key={val}>
+            <line x1={PAD.left} y1={toSvgY(val)} x2={W - PAD.right} y2={toSvgY(val)}
+              stroke="rgba(108,99,255,0.08)" strokeWidth="0.5" strokeDasharray="4 4" />
+            <text x={PAD.left - 5} y={toSvgY(val) + 4} fill="#3A4560" fontSize="9" textAnchor="end" fontFamily="monospace">
               {val}%
             </text>
           </g>
         ))}
 
-        {xLabels.map((val) => {
-          const svgX = toSvgX(val);
-          const label = usesMinute ? `${val}'` : `${24 - val}h`;
-          return (
-            <text
-              key={`x-${val}`}
-              x={svgX} y={H - 6}
-              fill="#64748b" fontSize="10" textAnchor="middle" fontFamily="JetBrains Mono, monospace"
-            >
-              {label}
-            </text>
-          );
-        })}
-
-        {bookmakerLines.map((bm, i) => (
-          <line
-            key={`bm-line-${bm.bookmakerKey}`}
-            x1={PAD_LEFT}
-            y1={toSvgY(bm.homeProb)}
-            x2={W - PAD_RIGHT}
-            y2={toSvgY(bm.homeProb)}
-            stroke={BOOKMAKER_LINE_COLOURS[i % BOOKMAKER_LINE_COLOURS.length]}
-            strokeWidth="1"
-            strokeDasharray="6 4"
-            opacity="0.3"
-          />
-        ))}
-
-        <path d={homePath} fill="none" stroke="#5B6EF5" strokeWidth="2.5" strokeLinejoin="round" />
-        <path d={drawPath} fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinejoin="round" opacity="0.7" />
-        <path d={awayPath} fill="none" stroke="#e5302f" strokeWidth="2" strokeLinejoin="round" />
-
-        {isLive && history.length > 0 && (() => {
-          const last = history[history.length - 1];
-          const cx = toSvgX(getX(last));
-          return (
-            <line
-              x1={cx} y1={PAD_TOP}
-              x2={cx} y2={PAD_TOP + CHART_H}
-              stroke="#5B6EF5" strokeWidth="1" strokeDasharray="4 2" opacity="0.5"
-            />
-          );
-        })()}
+        <path d={buildPath('home')} fill="none" stroke="#6C63FF" strokeWidth="2.5" strokeLinejoin="round" />
+        <path d={buildPath('draw')} fill="none" stroke="#7B8CAA" strokeWidth="1.5" strokeLinejoin="round" opacity="0.7" />
+        <path d={buildPath('away')} fill="none" stroke="#FF3366" strokeWidth="2" strokeLinejoin="round" />
 
         {hoverPoint && (() => {
           const hx = toSvgX(getX(hoverPoint));
           return (
             <g>
-              <line
-                x1={hx} y1={PAD_TOP}
-                x2={hx} y2={PAD_TOP + CHART_H}
-                stroke="#ffffff" strokeWidth="0.5" opacity="0.3"
-              />
-              <circle cx={hx} cy={toSvgY(hoverPoint.home)} r="4" fill="#5B6EF5" />
-              <circle cx={hx} cy={toSvgY(hoverPoint.draw)} r="3" fill="#94a3b8" />
-              <circle cx={hx} cy={toSvgY(hoverPoint.away)} r="3.5" fill="#e5302f" />
-
-              <rect
-                x={hx + 10} y={PAD_TOP}
-                width="90" height="54" rx="4"
-                fill="#0F1520" stroke="#1A2238" strokeWidth="0.5"
-              />
-              <text x={hx + 18} y={PAD_TOP + 15} fill="#5B6EF5" fontSize="11" fontFamily="JetBrains Mono, monospace">
-                H: {hoverPoint.home}%
-              </text>
-              <text x={hx + 18} y={PAD_TOP + 30} fill="#94a3b8" fontSize="11" fontFamily="JetBrains Mono, monospace">
-                D: {hoverPoint.draw}%
-              </text>
-              <text x={hx + 18} y={PAD_TOP + 45} fill="#e5302f" fontSize="11" fontFamily="JetBrains Mono, monospace">
-                A: {hoverPoint.away}%
-              </text>
+              <line x1={hx} y1={PAD.top} x2={hx} y2={PAD.top + CH}
+                stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+              <circle cx={hx} cy={toSvgY(hoverPoint.home)} r="4" fill="#6C63FF" />
+              <circle cx={hx} cy={toSvgY(hoverPoint.draw)} r="3" fill="#7B8CAA" />
+              <circle cx={hx} cy={toSvgY(hoverPoint.away)} r="3.5" fill="#FF3366" />
+              <rect x={hx + 8} y={PAD.top} width="82" height="52" rx="6"
+                fill="rgba(10,14,28,0.95)" stroke="rgba(108,99,255,0.3)" strokeWidth="1" />
+              <text x={hx + 15} y={PAD.top + 16} fill="#6C63FF" fontSize="10" fontFamily="monospace">H: {hoverPoint.home}%</text>
+              <text x={hx + 15} y={PAD.top + 30} fill="#7B8CAA" fontSize="10" fontFamily="monospace">D: {hoverPoint.draw}%</text>
+              <text x={hx + 15} y={PAD.top + 44} fill="#FF3366" fontSize="10" fontFamily="monospace">A: {hoverPoint.away}%</text>
             </g>
           );
         })()}
@@ -266,231 +567,75 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
   );
 }
 
-// -- LiveBetFeed -------------------------------------------------------------
-
-function LiveBetFeed({ fixture }) {
-  const [items, setItems] = useState(() => {
-    const forFixture = initialBetActivity.filter((b) => b.fixtureId === fixture.id);
-    const others = initialBetActivity.filter((b) => b.fixtureId !== fixture.id).slice(0, 15 - forFixture.length);
-    return [...forFixture, ...others].slice(0, 15);
-  });
-
-  const [paused, setPaused] = useState(false);
-  const intervalRef = useRef(null);
-
-  useEffect(() => {
-    if (paused) return;
-
-    intervalRef.current = setInterval(() => {
-      const newItem = generateBetActivity(fixture);
-      setItems((prev) => [newItem, ...prev].slice(0, 15));
-    }, FEED_POLL_INTERVAL_MS + Math.random() * 2000);
-
-    return () => clearInterval(intervalRef.current);
-  }, [fixture, paused]);
-
-  return (
-    <div
-      className="rounded-xl overflow-hidden h-full"
-      style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
-      <div className="px-4 py-2.5" style={{ borderBottom: '1px solid #1A2238' }}>
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Bet Feed</h3>
-      </div>
-      <div className="overflow-y-auto custom-scrollbar" style={{ maxHeight: '340px' }}>
-        {items.map((item, idx) => (
-          <div
-            key={item.id}
-            className="px-4 py-2.5 transition-all duration-300"
-            style={{
-              borderBottom: '1px solid rgba(26,34,56,0.3)',
-              animation: idx === 0 ? 'slide-in-top 0.3s ease-out' : undefined,
-            }}
-          >
-            <div className="flex items-start gap-2.5">
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                style={{ backgroundColor: '#161E2E', color: '#8A97B4' }}
-              >
-                {item.user.split(' ').map((w) => w[0]).join('').slice(0, 2)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-300 leading-relaxed">
-                  <span className="font-medium text-white">{item.user}</span>{' '}
-                  placed{' '}
-                  <span className="font-mono font-medium" style={{ color: '#5B6EF5' }}>
-                    {'\u00A3'}{item.stake}
-                  </span>{' '}
-                  on{' '}
-                  <span className="font-medium text-gray-200">{item.outcome}</span>{' '}
-                  <span className="text-gray-500">
-                    ({item.probability}%)
-                  </span>
-                  {item.stake >= HIGH_ROLLER_STAKE_THRESHOLD && (
-                    <span
-                      className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                      style={{ backgroundColor: 'rgba(91,110,245,0.15)', color: '#5B6EF5' }}
-                    >
-                      HIGH ROLLER
-                    </span>
-                  )}
-                </p>
-                <p className="text-[10px] text-gray-500 mt-0.5">
-                  {timeAgo(item.timestamp)}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// -- MatchStats --------------------------------------------------------------
+// ── Match Stats ───────────────────────────────────────────────────────────────
 
 function MatchStats({ stats, homeTeam, awayTeam }) {
   if (!stats) return null;
 
-  function PossessionBar({ home, away }) {
-    return (
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="font-mono text-sm font-bold text-white">{home}%</span>
-          <span className="text-xs text-gray-400 uppercase tracking-wider">Possession</span>
-          <span className="font-mono text-sm font-bold text-white">{away}%</span>
-        </div>
-        <div className="flex h-2 rounded-full overflow-hidden gap-0.5">
-          <div className="h-full rounded-l-full transition-all duration-700" style={{ width: `${home}%`, backgroundColor: '#5B6EF5' }} />
-          <div className="h-full rounded-r-full transition-all duration-700" style={{ width: `${away}%`, backgroundColor: '#e5302f' }} />
-        </div>
-      </div>
-    );
-  }
-
   function StatRow({ label, home, away }) {
     const total = home + away || 1;
     return (
-      <div className="flex items-center gap-3 py-2" style={{ borderBottom: '1px solid rgba(26,34,56,0.3)' }}>
-        <span className="font-mono text-sm text-white w-8 text-right">{home}</span>
-        <div className="flex-1">
-          <div className="flex h-1.5 rounded-full overflow-hidden gap-0.5 mb-1">
-            <div className="h-full rounded-l-full" style={{ width: `${(home / total) * 100}%`, backgroundColor: '#5B6EF5' }} />
-            <div className="h-full rounded-r-full" style={{ width: `${(away / total) * 100}%`, backgroundColor: '#e5302f' }} />
-          </div>
-          <p className="text-[10px] text-gray-500 text-center uppercase tracking-wider">{label}</p>
+      <div className="py-2.5" style={{ borderBottom: `1px solid ${C.borderFaint}` }}>
+        <div className="flex items-center gap-3 mb-1.5">
+          <span className="font-mono text-sm font-black w-8 text-right" style={{ color: C.text }}>{home}</span>
+          <span className="flex-1 text-[10px] font-black uppercase tracking-widest text-center" style={{ color: C.textMuted }}>{label}</span>
+          <span className="font-mono text-sm font-black w-8" style={{ color: C.text }}>{away}</span>
         </div>
-        <span className="font-mono text-sm text-white w-8">{away}</span>
+        <div className="flex h-1.5 rounded-full overflow-hidden gap-0.5 mx-8">
+          <div className="h-full rounded-l-full transition-all duration-700" style={{ width: `${(home / total) * 100}%`, background: 'linear-gradient(90deg, #6C63FF, #9B5DE5)' }} />
+          <div className="h-full rounded-r-full transition-all duration-700" style={{ width: `${(away / total) * 100}%`, background: 'linear-gradient(90deg, #FF6B35, #FF3366)' }} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl p-4" style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}>
-      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Match Stats</h3>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-gray-300">{homeTeam}</span>
-        <span className="text-xs font-medium text-gray-300">{awayTeam}</span>
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{ background: C.bg, border: `1px solid ${C.border}` }}
+    >
+      <div className="px-4 py-3" style={{ borderBottom: `1px solid ${C.borderFaint}` }}>
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#9B8FFF' }}>Match Stats</p>
+        </div>
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-xs font-semibold" style={{ color: C.textSub }}>{homeTeam}</span>
+          <span className="text-xs font-semibold" style={{ color: C.textSub }}>{awayTeam}</span>
+        </div>
       </div>
-      <PossessionBar home={stats.possession.home} away={stats.possession.away} />
-      <StatRow label="Shots" home={stats.shots.home} away={stats.shots.away} />
-      <StatRow label="On Target" home={stats.shotsOnTarget.home} away={stats.shotsOnTarget.away} />
-      <StatRow label="Corners" home={stats.corners.home} away={stats.corners.away} />
-      <StatRow label="Fouls" home={stats.fouls.home} away={stats.fouls.away} />
-      <StatRow label="Yellow Cards" home={stats.yellowCards.home} away={stats.yellowCards.away} />
-      <StatRow label="Red Cards" home={stats.redCards.home} away={stats.redCards.away} />
-      {stats.xG && (
-        <StatRow label="xG" home={stats.xG.home} away={stats.xG.away} />
-      )}
-    </div>
-  );
-}
 
-// -- MatchTimeline -----------------------------------------------------------
+      {/* Possession bar */}
+      <div className="px-4 pt-3 pb-1">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="font-mono text-sm font-black" style={{ color: C.text }}>{stats.possession.home}%</span>
+          <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: C.textMuted }}>Possession</span>
+          <span className="font-mono text-sm font-black" style={{ color: C.text }}>{stats.possession.away}%</span>
+        </div>
+        <div className="flex h-2 rounded-full overflow-hidden gap-0.5">
+          <div className="h-full rounded-l-full transition-all duration-700" style={{ width: `${stats.possession.home}%`, background: 'linear-gradient(90deg, #6C63FF, #9B5DE5)' }} />
+          <div className="h-full rounded-r-full transition-all duration-700" style={{ width: `${stats.possession.away}%`, background: 'linear-gradient(90deg, #FF6B35, #FF3366)' }} />
+        </div>
+      </div>
 
-function MatchTimeline({ events, homeTeam, awayTeam }) {
-  if (!events || events.length === 0) return null;
-
-  function getEventIcon(type) {
-    switch (type) {
-      case 'goal': return '\u26BD';
-      case 'yellow_card': return '\uD83D\uDFE8';
-      case 'red_card': return '\uD83D\uDFE5';
-      case 'whistle': return '\uD83D\uDD14';
-      case 'chance': return '\uD83C\uDFAF';
-      default: return '\u26AA';
-    }
-  }
-
-  return (
-    <div className="rounded-xl p-4" style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}>
-      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Match Timeline</h3>
-      <div className="space-y-0">
-        {events.map((event, i) => {
-          const isHome = event.team === 'home';
-          const isAway = event.team === 'away';
-          const isNeutral = !event.team;
-
-          return (
-            <div
-              key={`${event.minute}-${event.type}-${i}`}
-              className="flex items-start gap-3 py-2.5"
-              style={{ borderBottom: i < events.length - 1 ? '1px solid rgba(26,34,56,0.3)' : 'none' }}
-            >
-              <div className="flex-1 text-right">
-                {isHome && (
-                  <div>
-                    <span className="text-sm font-medium text-white">{event.player}</span>
-                    {event.assist && (
-                      <span className="text-xs text-gray-500 block">Assist: {event.assist}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col items-center shrink-0 w-14">
-                <span className="font-mono text-xs font-bold" style={{ color: isNeutral ? '#8A97B4' : '#5B6EF5' }}>
-                  {event.minute}'
-                </span>
-                <span className="text-base leading-none mt-0.5">
-                  {getEventIcon(event.type)}
-                </span>
-              </div>
-              <div className="flex-1">
-                {isAway && (
-                  <div>
-                    <span className="text-sm font-medium text-white">{event.player}</span>
-                    {event.assist && (
-                      <span className="text-xs text-gray-500 block">Assist: {event.assist}</span>
-                    )}
-                  </div>
-                )}
-                {isNeutral && (
-                  <span className="text-xs text-gray-500 italic">{event.description}</span>
-                )}
-              </div>
-            </div>
-          );
-        })}
+      <div className="px-4 pb-2">
+        <StatRow label="Shots" home={stats.shots.home} away={stats.shots.away} />
+        <StatRow label="On Target" home={stats.shotsOnTarget.home} away={stats.shotsOnTarget.away} />
+        <StatRow label="Corners" home={stats.corners.home} away={stats.corners.away} />
+        <StatRow label="Fouls" home={stats.fouls.home} away={stats.fouls.away} />
+        <StatRow label="Yellows" home={stats.yellowCards.home} away={stats.yellowCards.away} />
+        <StatRow label="Reds" home={stats.redCards.home} away={stats.redCards.away} />
+        {stats.xG && <StatRow label="xG" home={stats.xG.home} away={stats.xG.away} />}
       </div>
     </div>
   );
 }
 
-// -- MoreMarkets -------------------------------------------------------------
+// ── More Markets ──────────────────────────────────────────────────────────────
 
 function MoreMarkets({ markets, fixture }) {
-  const [expandedMarkets, setExpandedMarkets] = useState({});
+  const [expanded, setExpanded] = useState({});
   const { addSelection, isSelected } = useBetSlip();
   const { format } = useOddsFormat();
-
-  function toggleMarket(marketId) {
-    setExpandedMarkets((prev) => ({
-      ...prev,
-      [marketId]: !prev[marketId],
-    }));
-  }
 
   function handleOutcomeClick(market, outcome) {
     addSelection({
@@ -507,47 +652,49 @@ function MoreMarkets({ markets, fixture }) {
   if (!markets || markets.length === 0) return null;
 
   return (
-    <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}>
-      <div className="px-4 py-3" style={{ borderBottom: '1px solid #1A2238' }}>
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">More Markets</h3>
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{ background: C.bg, border: `1px solid ${C.border}` }}
+    >
+      <div className="px-4 py-3" style={{ borderBottom: `1px solid ${C.borderFaint}` }}>
+        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#9B8FFF' }}>More Markets</p>
       </div>
 
-      {markets.map((market) => {
-        const expanded = expandedMarkets[market.id] ?? false;
+      {markets.map(market => {
+        const isExpanded = expanded[market.id] ?? false;
         const isSettled = market.settled === true;
 
         return (
-          <div key={market.id} style={{ borderBottom: '1px solid rgba(26,34,56,0.3)' }}>
+          <div key={market.id} style={{ borderBottom: `1px solid ${C.borderFaint}` }}>
             <button
-              onClick={() => toggleMarket(market.id)}
+              onClick={() => setExpanded(prev => ({ ...prev, [market.id]: !prev[market.id] }))}
               className="w-full flex items-center justify-between px-4 py-3 transition-colors"
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(22,30,46,0.3)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(108,99,255,0.04)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-200">{market.name}</span>
+                <span className="text-sm font-bold" style={{ color: C.text }}>{market.name}</span>
                 {isSettled && (
                   <span
-                    className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase"
-                    style={{ backgroundColor: 'rgba(0,182,122,0.15)', color: '#00b67a' }}
+                    className="text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase"
+                    style={{ background: 'rgba(0,245,160,0.12)', color: '#00F5A0', border: '1px solid rgba(0,245,160,0.2)' }}
                   >
                     Settled
                   </span>
                 )}
               </div>
-              {expanded
-                ? <ChevronUp className="w-4 h-4 text-gray-500" />
-                : <ChevronDown className="w-4 h-4 text-gray-500" />
+              {isExpanded
+                ? <ChevronUp className="w-4 h-4" style={{ color: C.textMuted }} />
+                : <ChevronDown className="w-4 h-4" style={{ color: C.textMuted }} />
               }
             </button>
 
-            {expanded && (
+            {isExpanded && (
               <div className="px-4 pb-3">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {market.outcomes.map((outcome) => {
+                  {market.outcomes.map(outcome => {
                     const compositeId = `${market.id}-${outcome.id}`;
-                    const selected = isSelected(fixture.id, compositeId);
-                    const textColour = getProbabilityTextColour(outcome.probability);
+                    const sel = isSelected(fixture.id, compositeId);
                     const disabled = isSettled || outcome.decimalOdds === null;
 
                     return (
@@ -555,49 +702,17 @@ function MoreMarkets({ markets, fixture }) {
                         key={outcome.id}
                         onClick={() => !disabled && handleOutcomeClick(market, outcome)}
                         disabled={disabled}
-                        className="flex flex-col items-center gap-1 p-3 rounded-lg transition-all duration-200"
+                        className="flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all duration-200"
                         style={
-                          disabled
-                            ? {
-                                border: '1px solid rgba(26,34,56,0.3)',
-                                backgroundColor: 'rgba(8,12,20,0.5)',
-                                opacity: 0.5,
-                                cursor: 'not-allowed',
-                              }
-                            : selected
-                              ? {
-                                  border: '1px solid #5B6EF5',
-                                  backgroundColor: 'rgba(91,110,245,0.1)',
-                                  cursor: 'pointer',
-                                }
-                              : {
-                                  border: '1px solid rgba(26,34,56,0.5)',
-                                  backgroundColor: 'rgba(22,30,46,0.5)',
-                                  cursor: 'pointer',
-                                }
+                          disabled ? { border: `1px solid ${C.borderFaint}`, opacity: 0.5, cursor: 'not-allowed' }
+                          : sel ? { border: '1px solid rgba(108,99,255,0.5)', background: 'rgba(108,99,255,0.12)', cursor: 'pointer' }
+                          : { border: `1px solid ${C.borderFaint}`, background: 'rgba(255,255,255,0.02)', cursor: 'pointer' }
                         }
-                        onMouseEnter={(e) => {
-                          if (!disabled && !selected) {
-                            e.currentTarget.style.backgroundColor = '#161E2E';
-                            e.currentTarget.style.borderColor = '#252F45';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!disabled && !selected) {
-                            e.currentTarget.style.backgroundColor = 'rgba(22,30,46,0.5)';
-                            e.currentTarget.style.borderColor = 'rgba(26,34,56,0.5)';
-                          }
-                        }}
                       >
-                        <span className="text-xs text-gray-400 text-center">{outcome.label}</span>
-                        <span className={`font-mono text-lg font-bold ${textColour}`}>
+                        <span className="text-xs text-center" style={{ color: C.textSub }}>{outcome.label}</span>
+                        <span className="font-mono text-lg font-black" style={{ color: sel ? '#9B8FFF' : C.text }}>
                           {formatOdds(outcome.probability, format)}
                         </span>
-                        {outcome.decimalOdds !== null && format !== 'decimal' && (
-                          <span className="font-mono text-[10px] text-gray-500">
-                            {outcome.decimalOdds.toFixed(2)}
-                          </span>
-                        )}
                       </button>
                     );
                   })}
@@ -611,190 +726,75 @@ function MoreMarkets({ markets, fixture }) {
   );
 }
 
-// -- Main Component ----------------------------------------------------------
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function MatchDetailView({ fixture, detail, onBack }) {
-  const stats = detail?.stats || null;
+  const [activeTab, setActiveTab] = useState('overview');
   const events = detail?.events || [];
-  const probabilityHistory = detail?.probabilityHistory || null;
-  const markets = detail?.markets || [];
-  const bookmakers = fixture.bookmakers || [];
-  const { format } = useOddsFormat();
+
+  const visibleTabs = TABS.filter(t => {
+    if (t.id === 'timeline') return events.length > 0;
+    return true;
+  });
 
   return (
-    <div className="animate-fade-in">
-      {/* Back navigation */}
+    <div>
+      {/* Back button */}
       <button
         onClick={onBack}
-        className="flex items-center gap-2 mb-4 text-sm font-medium transition-colors"
-        style={{ color: '#5B6EF5' }}
-        onMouseEnter={(e) => e.currentTarget.style.color = '#7082F8'}
-        onMouseLeave={(e) => e.currentTarget.style.color = '#5B6EF5'}
+        className="flex items-center gap-2 mb-4 text-sm font-semibold transition-colors"
+        style={{ color: '#9B8FFF' }}
+        onMouseEnter={e => e.currentTarget.style.color = '#B06FFF'}
+        onMouseLeave={e => e.currentTarget.style.color = '#9B8FFF'}
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Football
       </button>
 
-      {/* Match header card */}
-      <div
-        className="rounded-xl overflow-hidden mb-6"
-        style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}
-      >
-        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(26,34,56,0.5)' }}>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              {fixture.competition}
-            </span>
-            <span className="text-gray-600">{'\u00B7'}</span>
-            <span className="text-xs text-gray-500">
-              {formatMatchDate(fixture.kickoff)}
-            </span>
-          </div>
+      {/* Match header */}
+      <MatchHeader fixture={fixture} detail={detail} />
 
-          {fixture.isLive && (
-            <div
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+      {/* Tab bar */}
+      <div
+        className="flex gap-1 p-1 rounded-2xl mb-4"
+        style={{ background: 'rgba(10,14,28,0.9)', border: `1px solid ${C.borderFaint}` }}
+      >
+        {visibleTabs.map(tab => {
+          const { Icon } = tab;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-black transition-all duration-200"
               style={{
-                backgroundColor: 'rgba(229,48,47,0.1)',
-                border: '1px solid rgba(229,48,47,0.2)',
+                background: isActive ? 'linear-gradient(135deg, #6C63FF, #9B5DE5)' : 'transparent',
+                color: isActive ? '#F0F6FF' : C.textMuted,
+                boxShadow: isActive ? '0 4px 12px rgba(108,99,255,0.3)' : 'none',
               }}
             >
-              <span className="relative flex h-2 w-2">
-                <span
-                  className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                  style={{ backgroundColor: '#e5302f' }}
-                />
-                <span
-                  className="relative inline-flex rounded-full h-2 w-2"
-                  style={{ backgroundColor: '#e5302f' }}
-                />
-              </span>
-              <span className="text-xs font-bold" style={{ color: '#e5302f' }}>
-                LIVE {fixture.liveMinute}'
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="px-6 py-6">
-          <div className="flex items-center justify-center gap-6">
-            <div className="flex-1 text-right">
-              <h2 className="text-xl font-bold text-white">{fixture.homeTeam}</h2>
-            </div>
-
-            {fixture.isLive && fixture.liveScore ? (
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-3xl font-bold text-white">
-                  {fixture.liveScore.home}
-                </span>
-                <span className="text-gray-600 text-xl">-</span>
-                <span className="font-mono text-3xl font-bold text-white">
-                  {fixture.liveScore.away}
-                </span>
-              </div>
-            ) : (
-              <span className="text-gray-600 text-lg">vs</span>
-            )}
-
-            <div className="flex-1">
-              <h2 className="text-xl font-bold text-white">{fixture.awayTeam}</h2>
-            </div>
-          </div>
-
-          {detail && (
-            <p className="text-center text-xs text-gray-500 mt-2">
-              {detail.venue || ''}
-              {detail.referee && ` \u00B7 Referee: ${detail.referee}`}
-            </p>
-          )}
-        </div>
+              <Icon className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Narrative Prompts -- popular bet suggestions */}
-      <NarrativePrompts fixture={fixture} detail={detail} />
-
-      {/* Match Odds + Live Bet Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
-        <div className="lg:col-span-3">
-          <div
-            className="rounded-xl p-4"
-            style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}
-          >
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Match Odds</h3>
-            <div className="grid grid-cols-3 gap-3">
-              {fixture.outcomes.map((outcome) => {
-                const textColour = getProbabilityTextColour(outcome.probability);
-                return (
-                  <div
-                    key={outcome.id}
-                    className="flex flex-col items-center gap-2 p-4 rounded-lg"
-                    style={{
-                      backgroundColor: 'rgba(22,30,46,0.5)',
-                      border: '1px solid rgba(26,34,56,0.5)',
-                    }}
-                  >
-                    <span className="text-xs text-gray-400">{outcome.label}</span>
-                    <span className={`font-mono text-2xl font-bold ${textColour}`}>
-                      {formatOdds(outcome.probability, format)}
-                    </span>
-                    <div className="w-full">
-                      <ProbabilityBar probability={outcome.probability} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className="lg:col-span-2">
-          <LiveBetFeed fixture={fixture} />
-        </div>
-      </div>
-
-      {bookmakers.length > 0 && (
-        <div className="mb-6">
-          <BookmakerOddsPanel
-            bookmakers={bookmakers}
-            homeTeam={fixture.homeTeam}
-            awayTeam={fixture.awayTeam}
-          />
-        </div>
-      )}
-
-      <div
-        className="rounded-xl p-4 mb-6"
-        style={{ backgroundColor: '#0F1520', border: '1px solid #1A2238' }}
-      >
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-          Probability Movement
-        </h3>
-        <OddsGraph
-          history={probabilityHistory}
-          isLive={fixture.isLive}
-          homeTeam={fixture.homeTeam}
-          awayTeam={fixture.awayTeam}
-          bookmakers={bookmakers}
-        />
-      </div>
-
-      {stats && (
-        <div className="mb-6">
-          <MatchStats stats={stats} homeTeam={fixture.homeTeam} awayTeam={fixture.awayTeam} />
-        </div>
-      )}
-
-      {events.length > 0 && (
-        <div className="mb-6">
-          <MatchTimeline events={events} homeTeam={fixture.homeTeam} awayTeam={fixture.awayTeam} />
-        </div>
-      )}
-
-      {markets.length > 0 && (
-        <div className="mb-6">
-          <MoreMarkets markets={markets} fixture={fixture} />
-        </div>
-      )}
+      {/* Tab content */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          {activeTab === 'overview' && <OverviewTab fixture={fixture} detail={detail} />}
+          {activeTab === 'markets' && <MarketsTab fixture={fixture} detail={detail} />}
+          {activeTab === 'feed' && <FeedTab fixture={fixture} />}
+          {activeTab === 'timeline' && <TimelineTab events={events} homeTeam={fixture.homeTeam} awayTeam={fixture.awayTeam} />}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
