@@ -1,75 +1,66 @@
 /**
- * FightCard.jsx
- *
- * Card component for boxing and MMA bouts. Features dramatic versus
- * styling with fighters facing off, weight class info, and two-way
- * outcome buttons.
- *
- * Supports both rich fighter objects (fighter1/fighter2) and flat
- * homeTeam/awayTeam strings for backward compatibility.
- *
- * PredictaMarket v3 ARIA palette — electric indigo primary.
+ * FightCard.jsx — PredictaMarket v4
+ * Fight poster aesthetic. Dramatic gradients, fighter vs fighter layout.
  */
 
-import { Zap, Award } from 'lucide-react';
+import { Zap, Award, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { useOddsFormat } from '../context/OddsFormatContext.jsx';
 import { formatOdds } from '../utils/oddsFormatter.js';
-import { getProbabilityTextColour } from '../data/oddsUtils.js';
 import ProbabilityBar from './ProbabilityBar.jsx';
 
-const C = {
-  bg: '#080C14',
-  card: '#0F1520',
-  elevated: '#161E2E',
-  border: '#1A2238',
-  borderHover: '#252F45',
-  primary: '#5B6EF5',
-  primaryGlow: 'rgba(91,110,245,0.15)',
-  liveRed: '#FF6B6B',
-  text: '#f0f4ff',
-  textSecondary: '#8A97B4',
-  textMuted: '#4a5568',
+const FLAG_MAP = {
+  GBR: '🇬🇧', UKR: '🇺🇦', USA: '🇺🇸', MEX: '🇲🇽',
+  RUS: '🇷🇺', BRA: '🇧🇷', CHN: '🇨🇳', JPN: '🇯🇵',
+  IRL: '🇮🇪', AUS: '🇦🇺', CAN: '🇨🇦', NIG: '🇳🇬',
 };
 
 function formatEventDate(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-GB', {
-    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+  return new Date(dateStr).toLocaleDateString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short',
   });
 }
 
-const FLAG_MAP = {
-  GBR: '\uD83C\uDDEC\uD83C\uDDE7', UKR: '\uD83C\uDDFA\uD83C\uDDE6',
-  USA: '\uD83C\uDDFA\uD83C\uDDF8', MEX: '\uD83C\uDDF2\uD83C\uDDFD',
-  RUS: '\uD83C\uDDF7\uD83C\uDDFA', BRA: '\uD83C\uDDE7\uD83C\uDDF7',
-  CHN: '\uD83C\uDDE8\uD83C\uDDF3', JPN: '\uD83C\uDDEF\uD83C\uDDF5',
-};
-
-function getFlagEmoji(code) {
-  return FLAG_MAP[code] || '';
-}
-
 const cardVariants = {
-  hidden: { opacity: 0, y: 12 },
+  hidden: { opacity: 0, y: 16 },
   visible: (i) => ({
     opacity: 1, y: 0,
-    transition: { delay: i * 0.08, duration: 0.35, ease: 'easeOut' },
+    transition: { delay: i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] },
   }),
 };
+
+function FighterAvatar({ name, nationality }) {
+  const initials = name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+  const colors = [
+    ['#6C63FF', '#9B5DE5'],
+    ['#FF3366', '#FF6B35'],
+    ['#00F5A0', '#00D4FF'],
+    ['#FFD700', '#FF9500'],
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) & 0xFFFFFF;
+  const [from, to] = colors[hash % colors.length];
+  return (
+    <div
+      className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-black text-white mx-auto mb-2"
+      style={{ background: `linear-gradient(135deg, ${from} 0%, ${to} 100%)` }}
+    >
+      {initials}
+    </div>
+  );
+}
 
 export default function FightCard({ fixture, index = 0 }) {
   const { addSelection, isSelected } = useBetSlip();
   const { format } = useOddsFormat();
 
-  // Gracefully handle both data shapes
   const f1 = fixture.fighter1 || { name: fixture.homeTeam, nationality: '', record: '', weightClass: '' };
   const f2 = fixture.fighter2 || { name: fixture.awayTeam, nationality: '', record: '', weightClass: '' };
   const o1 = fixture.outcomes[0];
   const o2 = fixture.outcomes[1];
 
-  function handleOutcomeClick(outcome, fighterName) {
+  function handleClick(outcome, fighterName) {
     addSelection({
       eventId: fixture.id,
       eventName: `${f1.name} vs ${f2.name}`,
@@ -85,129 +76,214 @@ export default function FightCard({ fixture, index = 0 }) {
     <motion.div
       custom={index}
       variants={cardVariants}
-      initial={index < 3 ? 'hidden' : 'visible'}
+      initial={index < 4 ? 'hidden' : 'visible'}
       animate="visible"
-      className="rounded-2xl overflow-hidden transition-all duration-200"
+      className="rounded-2xl overflow-hidden"
       style={{
-        backgroundColor: C.card,
-        border: `1px solid ${C.border}`,
+        background: 'rgba(12,17,30,0.75)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
+        transition: 'all 0.25s ease',
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = C.borderHover;
-        e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.4)';
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.13)';
+        e.currentTarget.style.boxShadow = '0 8px 40px rgba(0,0,0,0.5)';
+        e.currentTarget.style.transform = 'translateY(-1px)';
       }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = C.border;
-        e.currentTarget.style.boxShadow = 'none';
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+        e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.35)';
+        e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: `1px solid ${C.border}` }}
+        className="flex items-center justify-between px-4 py-2.5"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
       >
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: C.textSecondary }}>
+          <span
+            className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"
+            style={{ background: 'rgba(255,51,102,0.12)', color: '#FF7096', border: '1px solid rgba(255,51,102,0.2)' }}
+          >
             {fixture.competitionShort}
           </span>
           {f1.weightClass && (
-            <>
-              <span style={{ color: C.textMuted }}>|</span>
-              <span className="text-xs" style={{ color: C.textSecondary }}>{f1.weightClass}</span>
-            </>
+            <span className="text-xs" style={{ color: '#7B8CAA' }}>{f1.weightClass}</span>
           )}
         </div>
-        {fixture.isTitleFight && (
-          <div className="flex items-center gap-1">
-            <Award className="w-3.5 h-3.5" style={{ color: C.primary }} />
-            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: C.primary }}>
-              Title Fight
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {fixture.isTitleFight && (
+            <div className="flex items-center gap-1">
+              <Award className="w-3.5 h-3.5" style={{ color: '#FFD700' }} />
+              <span className="text-[10px] font-bold uppercase tracking-wider gradient-text-gold">
+                Title Fight
+              </span>
+            </div>
+          )}
+          {fixture.eventDate && (
+            <div className="flex items-center gap-1" style={{ color: '#7B8CAA' }}>
+              <Clock className="w-3 h-3" />
+              <span className="text-xs">{formatEventDate(fixture.eventDate)}</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Belt info */}
+      {/* Title fight belt info */}
       {fixture.isTitleFight && fixture.beltInfo && (
         <div
           className="px-4 py-2 text-center"
-          style={{ backgroundColor: C.primaryGlow, borderBottom: `1px solid ${C.border}` }}
+          style={{
+            background: 'linear-gradient(90deg, rgba(255,215,0,0.06) 0%, rgba(255,149,0,0.06) 100%)',
+            borderBottom: '1px solid rgba(255,215,0,0.1)',
+          }}
         >
-          <span className="text-xs font-semibold" style={{ color: C.primary }}>{fixture.beltInfo}</span>
+          <span className="text-xs font-semibold gradient-text-gold">{fixture.beltInfo}</span>
         </div>
       )}
 
-      {/* VS Display */}
-      <div className="px-4 py-6">
+      {/* Fighters */}
+      <div className="px-6 py-6">
         <div className="flex items-center justify-between">
           <div className="flex-1 text-center">
-            {f1.nationality && <span className="text-lg mb-1 block">{getFlagEmoji(f1.nationality)}</span>}
-            <h3 className="text-lg font-bold mb-1" style={{ color: C.text }}>{f1.name}</h3>
-            {f1.record && <span className="font-mono text-xs" style={{ color: C.textSecondary }}>{f1.record}</span>}
+            <FighterAvatar name={f1.name} nationality={f1.nationality} />
+            {f1.nationality && (
+              <span className="text-base mb-0.5 block">{FLAG_MAP[f1.nationality] || ''}</span>
+            )}
+            <h3
+              className="text-base font-bold leading-tight font-display"
+              style={{ color: '#F0F6FF' }}
+            >
+              {f1.name}
+            </h3>
+            {f1.record && (
+              <span
+                className="font-mono text-xs mt-0.5 block"
+                style={{ color: '#7B8CAA' }}
+              >
+                {f1.record}
+              </span>
+            )}
           </div>
 
-          <div className="flex items-center justify-center mx-4">
-            <div className="flex items-center gap-1">
-              <Zap className="w-4 h-4" style={{ color: C.primary }} />
-              <span className="text-sm font-black uppercase tracking-widest" style={{ color: C.textMuted }}>VS</span>
-              <Zap className="w-4 h-4" style={{ color: C.primary }} />
+          {/* VS badge */}
+          <div className="flex flex-col items-center mx-4">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
+              <Zap className="w-4 h-4" style={{ color: '#6C63FF' }} />
             </div>
+            <span
+              className="text-[10px] font-black uppercase tracking-widest mt-1.5"
+              style={{ color: '#3A4560' }}
+            >
+              VS
+            </span>
           </div>
 
           <div className="flex-1 text-center">
-            {f2.nationality && <span className="text-lg mb-1 block">{getFlagEmoji(f2.nationality)}</span>}
-            <h3 className="text-lg font-bold mb-1" style={{ color: C.text }}>{f2.name}</h3>
-            {f2.record && <span className="font-mono text-xs" style={{ color: C.textSecondary }}>{f2.record}</span>}
+            <FighterAvatar name={f2.name} nationality={f2.nationality} />
+            {f2.nationality && (
+              <span className="text-base mb-0.5 block">{FLAG_MAP[f2.nationality] || ''}</span>
+            )}
+            <h3
+              className="text-base font-bold leading-tight font-display"
+              style={{ color: '#F0F6FF' }}
+            >
+              {f2.name}
+            </h3>
+            {f2.record && (
+              <span
+                className="font-mono text-xs mt-0.5 block"
+                style={{ color: '#7B8CAA' }}
+              >
+                {f2.record}
+              </span>
+            )}
           </div>
         </div>
       </div>
 
       {/* Outcome buttons */}
       <div className="grid grid-cols-2 gap-3 px-4 pb-4">
-        {[
-          { outcome: o1, fighter: f1 },
-          { outcome: o2, fighter: f2 },
-        ].map(({ outcome, fighter }) => {
+        {[{ outcome: o1, fighter: f1 }, { outcome: o2, fighter: f2 }].map(({ outcome, fighter }) => {
           const selected = isSelected(fixture.id, outcome.id);
-          const textColour = getProbabilityTextColour(outcome.probability);
-
           return (
             <button
               key={outcome.id}
-              onClick={() => handleOutcomeClick(outcome, fighter.name)}
+              onClick={() => handleClick(outcome, fighter.name)}
               className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-200 cursor-pointer"
               style={
                 selected
-                  ? { border: `1px solid ${C.primary}`, backgroundColor: 'rgba(91,110,245,0.08)' }
-                  : { border: `1px solid ${C.border}`, backgroundColor: C.elevated }
+                  ? {
+                      background: 'rgba(108,99,255,0.15)',
+                      border: '1px solid rgba(108,99,255,0.6)',
+                      boxShadow: '0 0 20px rgba(108,99,255,0.2)',
+                    }
+                  : {
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                    }
               }
-              onMouseEnter={(e) => { if (!selected) e.currentTarget.style.borderColor = 'rgba(91,110,245,0.4)'; }}
-              onMouseLeave={(e) => { if (!selected) e.currentTarget.style.borderColor = C.border; }}
+              onMouseEnter={e => {
+                if (!selected) {
+                  e.currentTarget.style.background = 'rgba(108,99,255,0.06)';
+                  e.currentTarget.style.borderColor = 'rgba(108,99,255,0.35)';
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                }
+              }}
+              onMouseLeave={e => {
+                if (!selected) {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }
+              }}
             >
-              <span className="text-xs uppercase tracking-wider" style={{ color: C.textSecondary }}>
+              <span
+                className="text-[10px] uppercase tracking-widest font-medium"
+                style={{ color: '#7B8CAA' }}
+              >
                 {fighter.name.split(' ').pop()} Win
               </span>
-              <span className={`font-mono text-2xl font-bold ${textColour}`}>
+              <span
+                className="font-mono text-2xl font-black"
+                style={
+                  selected
+                    ? {
+                        background: 'linear-gradient(135deg, #6C63FF 0%, #B06FFF 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                      }
+                    : { color: '#E8F0FF' }
+                }
+              >
                 {formatOdds(outcome.probability, format)}
               </span>
               <div className="w-full">
-                <ProbabilityBar probability={outcome.probability} />
+                <ProbabilityBar probability={outcome.probability} selected={selected} />
               </div>
             </button>
           );
         })}
       </div>
 
-      {/* Footer */}
-      <div
-        className="flex items-center justify-between px-4 py-2.5"
-        style={{ borderTop: `1px solid ${C.border}` }}
-      >
-        <span className="text-xs" style={{ color: C.textMuted }}>{fixture.venue || ''}</span>
-        <span className="text-xs font-mono" style={{ color: C.textSecondary }}>
-          {fixture.eventDate ? formatEventDate(fixture.eventDate) : ''}
-        </span>
-      </div>
+      {fixture.venue && (
+        <div
+          className="px-4 py-2 text-center"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
+        >
+          <span className="text-xs" style={{ color: '#3A4560' }}>{fixture.venue}</span>
+        </div>
+      )}
     </motion.div>
   );
 }

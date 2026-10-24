@@ -1,36 +1,34 @@
 /**
- * ProbabilityBar.jsx
- *
- * A thin horizontal bar that visually represents a probability percentage.
- * Animates from 0 to the target width on mount when `animated` is true.
- * Colour is derived from the probability threshold via getProbabilityColour.
- * Updated for bet365 brand palette.
+ * ProbabilityBar.jsx — v4 gradient bar
  */
-
 import { useState, useEffect } from 'react';
-import { getProbabilityColour } from '../data/oddsUtils.js';
 
-export default function ProbabilityBar({ probability, animated = true }) {
+export default function ProbabilityBar({ probability, animated = true, selected = false }) {
   const [width, setWidth] = useState(animated ? 0 : probability);
 
   useEffect(() => {
     if (!animated) return;
-    // requestAnimationFrame ensures the initial 0-width render paints
-    // before the transition kicks in -- without this, the browser may
-    // batch the 0 and target values into a single paint (no animation).
-    const raf = requestAnimationFrame(() => {
-      setWidth(probability);
-    });
+    const raf = requestAnimationFrame(() => setWidth(probability));
     return () => cancelAnimationFrame(raf);
   }, [probability, animated]);
 
-  const colourClass = getProbabilityColour(probability);
+  const gradient = selected
+    ? 'linear-gradient(90deg, #6C63FF 0%, #B06FFF 100%)'
+    : probability >= 60
+    ? 'linear-gradient(90deg, #00F5A0 0%, #00D4FF 100%)'
+    : probability >= 40
+    ? 'linear-gradient(90deg, #6C63FF 0%, #9B5DE5 100%)'
+    : 'linear-gradient(90deg, #FF6B35 0%, #FF3366 100%)';
 
   return (
-    <div className="h-1 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(45,63,82,0.5)' }}>
+    <div className="h-1 w-full rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
       <div
-        className={`h-full rounded-full ${colourClass} transition-all duration-700 ease-out`}
-        style={{ width: `${width}%` }}
+        className="h-full rounded-full transition-all duration-700 ease-out"
+        style={{
+          width: `${width}%`,
+          background: gradient,
+          boxShadow: selected ? '0 0 6px rgba(108,99,255,0.5)' : 'none',
+        }}
       />
     </div>
   );

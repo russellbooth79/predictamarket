@@ -1,27 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', Menlo, monospace;
 
-  /* PredictaMarket v3 palette — ARIA electric indigo rebrand */
-  --color-brand-primary: #5B6EF5;
-  --color-brand-bg: #080C14;
-  --color-brand-card: #0F1520;
-  --color-brand-elevated: #161E2E;
-  --color-brand-border: #1A2238;
-  --color-brand-border-hover: #252F45;
-  --color-brand-live: #FF6B6B;
-  --color-brand-green: #A8FF3E;
-  --color-brand-text: #f0f4ff;
-  --color-brand-text-secondary: #8A97B4;
-  --color-brand-text-muted: #4a5568;
-
-  --animate-shake: shake 0.4s ease-in-out;
-  --animate-fade-in: fade-in 0.2s ease-out;
-  --animate-slide-in-bottom: slide-in-bottom 0.3s ease-out;
+  --color-brand-primary: #6C63FF;
+  --color-brand-bg: #05080F;
+  --color-brand-card: rgba(15,20,35,0.6);
+  --color-brand-elevated: rgba(255,255,255,0.05);
+  --color-brand-border: rgba(255,255,255,0.07);
+  --color-brand-live: #FF3366;
+  --color-brand-green: #00F5A0;
+  --color-brand-text: #F0F6FF;
+  --color-brand-text-secondary: #7B8CAA;
+  --color-brand-text-muted: #3A4560;
 }
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
@@ -37,7 +34,7 @@
 }
 
 @keyframes slide-in-bottom {
-  from { transform: translateY(8px); opacity: 0; }
+  from { transform: translateY(12px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
@@ -46,14 +43,46 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 4px rgba(255, 107, 107, 0.3); }
-  50% { box-shadow: 0 0 12px rgba(255, 107, 107, 0.6); }
+@keyframes live-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 51, 102, 0.5);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 51, 102, 0);
+    opacity: 0.85;
+  }
 }
 
-* {
-  box-sizing: border-box;
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(108,99,255,0.3), 0 0 20px rgba(108,99,255,0.1); }
+  50% { box-shadow: 0 0 16px rgba(108,99,255,0.5), 0 0 40px rgba(108,99,255,0.2); }
 }
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes float-up {
+  from { transform: translateY(6px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes number-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+@keyframes aurora {
+  0%, 100% { opacity: 0.4; transform: scale(1) rotate(0deg); }
+  50% { opacity: 0.7; transform: scale(1.05) rotate(2deg); }
+}
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
+
+* { box-sizing: border-box; }
 
 html, body, #root {
   height: 100%;
@@ -63,46 +92,143 @@ html, body, #root {
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background-color: #080C14;
-  color: #f0f4ff;
+  background-color: #05080F;
+  color: #F0F6FF;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Subtle aurora background */
+  background-image:
+    radial-gradient(ellipse 80% 60% at 20% 60%, rgba(108,99,255,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% 20%, rgba(155,93,229,0.05) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 50% 100%, rgba(0,212,255,0.03) 0%, transparent 50%);
+  background-attachment: fixed;
 }
+
+/* ── Typography utilities ────────────────────────────────────────────────── */
+
+.font-display {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+/* ── Gradient text ───────────────────────────────────────────────────────── */
+
+.gradient-text-primary {
+  background: linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-green {
+  background: linear-gradient(135deg, #00F5A0 0%, #00D4FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-live {
+  background: linear-gradient(135deg, #FF3366 0%, #FF6B35 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-gold {
+  background: linear-gradient(135deg, #FFD700 0%, #FF9500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Glassmorphism ───────────────────────────────────────────────────────── */
+
+.glass {
+  background: rgba(15, 20, 35, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+
+.glass-elevated {
+  background: rgba(20, 28, 48, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* ── Gradient backgrounds ────────────────────────────────────────────────── */
+
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%);
+}
+
+.bg-gradient-live {
+  background: linear-gradient(135deg, #FF3366 0%, #FF6B35 100%);
+}
+
+.bg-gradient-green {
+  background: linear-gradient(135deg, #00F5A0 0%, #00D4FF 100%);
+}
+
+/* ── Glow effects ────────────────────────────────────────────────────────── */
+
+.glow-primary {
+  box-shadow: 0 0 20px rgba(108,99,255,0.3), 0 0 40px rgba(108,99,255,0.1);
+}
+
+.glow-live {
+  box-shadow: 0 0 20px rgba(255,51,102,0.4), 0 0 40px rgba(255,51,102,0.15);
+}
+
+.glow-green {
+  box-shadow: 0 0 20px rgba(0,245,160,0.3), 0 0 40px rgba(0,245,160,0.1);
+}
+
+/* ── Animate classes ─────────────────────────────────────────────────────── */
+
+.animate-shake { animation: shake 0.4s ease-in-out; }
+.animate-fade-in { animation: fade-in 0.2s ease-out; }
+.animate-slide-in-bottom { animation: slide-in-bottom 0.3s ease-out; }
+.animate-slide-in-top { animation: slide-in-top 0.3s ease-out; }
+.animate-float-up { animation: float-up 0.35s ease-out; }
+.animate-live-pulse { animation: live-pulse 1.8s ease-in-out infinite; }
+.animate-glow-pulse { animation: glow-pulse 2.5s ease-in-out infinite; }
+.animate-number-pop { animation: number-pop 0.25s ease-out; }
+
+/* ── Scrollbars ──────────────────────────────────────────────────────────── */
 
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #080C14;
-}
+.custom-scrollbar::-webkit-scrollbar { width: 3px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #1A2238;
+  background: rgba(108,99,255,0.3);
   border-radius: 2px;
 }
-
-.animate-shake {
-  animation: shake 0.4s ease-in-out;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(108,99,255,0.5);
 }
 
-.animate-fade-in {
-  animation: fade-in 0.2s ease-out;
+/* ── Shimmer skeleton ────────────────────────────────────────────────────── */
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.03) 0%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.03) 100%
+  );
+  background-size: 200% auto;
+  animation: shimmer 2s linear infinite;
 }
 
-.animate-slide-in-bottom {
-  animation: slide-in-bottom 0.3s ease-out;
-}
+/* ── Selection highlight ─────────────────────────────────────────────────── */
 
-.animate-slide-in-top {
-  animation: slide-in-top 0.3s ease-out;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
+::selection {
+  background: rgba(108,99,255,0.4);
+  color: #F0F6FF;
 }

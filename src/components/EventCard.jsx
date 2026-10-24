@@ -1,57 +1,33 @@
 /**
- * EventCard.jsx
- *
- * Redesigned football match card with three-way outcome selection.
- * Premium dark styling, form guide dots, social proof,
- * and competition logo placeholder.
- *
- * Each outcome button displays:
- * - Label (small, uppercase)
- * - Probability as the hero number (big, font-mono)
- * - Thin probability bar (3px)
- * - Selected state with indigo border and glow
- *
- * Form guide: last 5 results as coloured dots (W=green, D=gold, L=red)
- * derived deterministically from team name hash.
- *
- * PredictaMarket v3 ARIA palette — electric indigo primary.
+ * EventCard.jsx — PredictaMarket v4
+ * Glassmorphism football match card. Glowing selection states,
+ * gradient odds, vibrant live badge.
  */
 
-import { Heart, Clock, ChevronRight } from 'lucide-react';
+import { Heart, Clock, ChevronRight, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { useOddsFormat } from '../context/OddsFormatContext.jsx';
 import { formatOdds } from '../utils/oddsFormatter.js';
-import { getProbabilityTextColour } from '../data/oddsUtils.js';
 import ProbabilityBar from './ProbabilityBar.jsx';
 
-// -- ARIA palette constants -------------------------------------------------
-
 const C = {
-  card: '#0F1520',
-  elevated: '#161E2E',
-  border: '#1A2238',
-  borderHover: '#252F45',
-  primary: '#5B6EF5',
-  primaryGlow: 'rgba(91,110,245,0.15)',
-  liveRed: '#FF6B6B',
-  green: '#A8FF3E',
-  text: '#f0f4ff',
-  textSecondary: '#8A97B4',
-  textMuted: '#4a5568',
+  card: 'rgba(12,17,30,0.75)',
+  elevated: 'rgba(255,255,255,0.04)',
+  border: 'rgba(255,255,255,0.07)',
+  borderHover: 'rgba(255,255,255,0.14)',
+  primary: '#6C63FF',
+  primaryGrad: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)',
+  liveRed: '#FF3366',
+  green: '#00F5A0',
+  text: '#F0F6FF',
+  textSecondary: '#7B8CAA',
+  textMuted: '#3A4560',
 };
 
-// -- Deterministic form guide -----------------------------------------------
-
-/**
- * Generate a form string (e.g. "WWDLW") from a team name hash.
- * Same team name always produces the same form for visual consistency.
- */
 function simpleHash(str) {
   let h = 5381;
-  for (let i = 0; i < str.length; i++) {
-    h = ((h << 5) + h + str.charCodeAt(i)) & 0x7fffffff;
-  }
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) & 0x7fffffff;
   return h;
 }
 
@@ -65,8 +41,7 @@ function generateForm(teamName) {
 }
 
 function FormDot({ result }) {
-  // Draw dots use functional colours, not brand primary
-  const colors = { W: C.green, D: '#FFD700', L: C.liveRed };
+  const colors = { W: '#00F5A0', D: '#FFD700', L: '#FF3366' };
   return (
     <span
       className="inline-block w-2 h-2 rounded-full"
@@ -75,36 +50,13 @@ function FormDot({ result }) {
   );
 }
 
-// -- Competition logo placeholder -------------------------------------------
-
-function CompetitionBadge({ competitionShort }) {
-  const hash = simpleHash(competitionShort);
-  const hue = hash % 360;
-  const bg = `hsl(${hue}, 50%, 30%)`;
-
-  return (
-    <div
-      className="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0"
-      style={{ backgroundColor: bg, color: '#fff' }}
-    >
-      {competitionShort.slice(0, 2)}
-    </div>
-  );
+function getBetCount(id) {
+  return 1200 + (simpleHash(id) % 7300);
 }
-
-// -- Social proof: mock bet count from fixture ID hash ----------------------
-
-function getBetCount(fixtureId) {
-  const hash = simpleHash(fixtureId);
-  return 1200 + (hash % 7300);
-}
-
-// -- Format helpers ---------------------------------------------------------
 
 function formatKickoff(kickoff, isLive, liveMinute) {
   if (isLive) return `${liveMinute}'`;
-  const date = new Date(kickoff);
-  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return new Date(kickoff).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatDateLabel(kickoff) {
@@ -118,11 +70,10 @@ function formatDateLabel(kickoff) {
 }
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 12 },
+  hidden: { opacity: 0, y: 16 },
   visible: (i) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.08, duration: 0.35, ease: 'easeOut' },
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] },
   }),
 };
 
@@ -146,40 +97,66 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
     });
   }
 
+  const anySelected = fixture.outcomes.some(o => isSelected(fixture.id, o.id));
+
   return (
     <motion.div
       custom={index}
       variants={cardVariants}
-      initial={index < 3 ? 'hidden' : 'visible'}
+      initial={index < 4 ? 'hidden' : 'visible'}
       animate="visible"
-      className="rounded-2xl overflow-hidden transition-all duration-200"
+      className="rounded-2xl overflow-hidden"
       style={{
-        backgroundColor: C.card,
-        border: `1px solid ${C.border}`,
+        background: C.card,
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: anySelected
+          ? '1px solid rgba(108,99,255,0.5)'
+          : `1px solid ${C.border}`,
+        boxShadow: anySelected
+          ? '0 0 0 1px rgba(108,99,255,0.2), 0 8px 32px rgba(108,99,255,0.12)'
+          : '0 4px 24px rgba(0,0,0,0.3)',
+        transition: 'all 0.25s ease',
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = C.borderHover;
-        e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.4)';
+      onMouseEnter={e => {
+        if (!anySelected) {
+          e.currentTarget.style.borderColor = C.borderHover;
+          e.currentTarget.style.boxShadow = '0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }
       }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = C.border;
-        e.currentTarget.style.boxShadow = 'none';
+      onMouseLeave={e => {
+        if (!anySelected) {
+          e.currentTarget.style.borderColor = C.border;
+          e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.3)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }
       }}
     >
-      {/* Header: competition badge, name, time, live badge, favourite */}
+      {/* Live progress bar — full-width accent when live */}
+      {fixture.isLive && (
+        <div
+          className="h-0.5 w-full"
+          style={{ background: 'linear-gradient(90deg, #FF3366 0%, #FF6B35 50%, transparent 100%)' }}
+        />
+      )}
+
+      {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-2.5"
-        style={{ borderBottom: `1px solid rgba(26,34,56,0.5)` }}
+        style={{ borderBottom: `1px solid rgba(255,255,255,0.05)` }}
       >
         <div className="flex items-center gap-2">
-          <CompetitionBadge competitionShort={fixture.competitionShort} />
           <span
-            className="text-xs font-medium uppercase tracking-wide"
-            style={{ color: C.textMuted }}
+            className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"
+            style={{
+              background: 'rgba(108,99,255,0.12)',
+              color: '#9B8FFF',
+              border: '1px solid rgba(108,99,255,0.2)',
+            }}
           >
             {fixture.competitionShort}
           </span>
-          <span style={{ color: C.textMuted }}>|</span>
           <span className="text-xs" style={{ color: C.textSecondary }}>
             {formatDateLabel(fixture.kickoff)}
           </span>
@@ -188,78 +165,100 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
         <div className="flex items-center gap-2">
           {fixture.isLive ? (
             <div
-              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
               style={{
-                backgroundColor: 'rgba(255,107,107,0.1)',
-                border: '1px solid rgba(255,107,107,0.2)',
+                background: 'rgba(255,51,102,0.12)',
+                border: '1px solid rgba(255,51,102,0.25)',
               }}
             >
-              <span className="relative flex h-2 w-2">
+              <span className="relative flex h-1.5 w-1.5">
                 <span
-                  className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                  style={{ backgroundColor: C.liveRed }}
+                  className="animate-ping absolute inline-flex h-full w-full rounded-full"
+                  style={{ backgroundColor: C.liveRed, opacity: 0.75 }}
                 />
                 <span
-                  className="relative inline-flex rounded-full h-2 w-2"
+                  className="relative inline-flex rounded-full h-1.5 w-1.5"
                   style={{ backgroundColor: C.liveRed }}
                 />
               </span>
-              <span className="text-xs font-semibold" style={{ color: C.liveRed }}>
+              <span
+                className="text-xs font-bold tracking-wider"
+                style={{ color: C.liveRed }}
+              >
                 {formatKickoff(fixture.kickoff, true, fixture.liveMinute)}
               </span>
             </div>
           ) : (
             <div className="flex items-center gap-1" style={{ color: C.textSecondary }}>
-              <Clock className="w-3.5 h-3.5" />
+              <Clock className="w-3 h-3" />
               <span className="text-xs">{formatKickoff(fixture.kickoff, false, null)}</span>
             </div>
           )}
-
-          <button className="p-1 transition-colors" style={{ color: C.textMuted }}>
-            <Heart className="w-4 h-4" />
+          <button style={{ color: C.textMuted }}>
+            <Heart className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Teams row with form guide */}
-      <div className="px-4 py-3">
+      {/* Teams */}
+      <div className="px-4 pt-4 pb-3">
         <div className="flex items-center justify-between">
-          {/* Home team */}
           <div className="flex-1">
-            <span className="text-xl font-bold block" style={{ color: C.text }}>
+            <span
+              className="text-lg font-bold block leading-tight font-display"
+              style={{ color: C.text }}
+            >
               {fixture.homeTeam}
             </span>
-            <div className="flex items-center gap-1 mt-1">
-              {homeForm.map((r, i) => (
-                <FormDot key={i} result={r} />
-              ))}
+            <div className="flex items-center gap-1 mt-1.5">
+              {homeForm.map((r, i) => <FormDot key={i} result={r} />)}
             </div>
           </div>
 
-          {/* Score or VS */}
           {fixture.isLive && fixture.liveScore ? (
-            <div className="flex items-center gap-2 mx-4">
-              <span className="font-mono text-2xl font-bold" style={{ color: C.primary }}>
+            <div className="flex items-center gap-3 mx-4">
+              <span
+                className="font-mono text-3xl font-black"
+                style={{
+                  background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
                 {fixture.liveScore.home}
               </span>
-              <span style={{ color: C.textMuted }}>-</span>
-              <span className="font-mono text-2xl font-bold" style={{ color: C.primary }}>
+              <span className="text-sm font-light" style={{ color: C.textMuted }}>–</span>
+              <span
+                className="font-mono text-3xl font-black"
+                style={{
+                  background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
                 {fixture.liveScore.away}
               </span>
             </div>
           ) : (
-            <span className="text-sm mx-4" style={{ color: C.textMuted }}>vs</span>
+            <div
+              className="mx-4 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+              style={{ background: 'rgba(255,255,255,0.04)', color: C.textMuted, border: `1px solid ${C.border}` }}
+            >
+              vs
+            </div>
           )}
 
-          {/* Away team */}
           <div className="flex-1 text-right">
-            <span className="text-xl font-bold block" style={{ color: C.text }}>
+            <span
+              className="text-lg font-bold block leading-tight font-display"
+              style={{ color: C.text }}
+            >
               {fixture.awayTeam}
             </span>
-            <div className="flex items-center gap-1 mt-1 justify-end">
-              {awayForm.map((r, i) => (
-                <FormDot key={i} result={r} />
-              ))}
+            <div className="flex items-center gap-1 mt-1.5 justify-end">
+              {awayForm.map((r, i) => <FormDot key={i} result={r} />)}
             </div>
           </div>
         </div>
@@ -269,51 +268,63 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
       <div className="grid grid-cols-3 gap-2 px-4 pb-3">
         {fixture.outcomes.map((outcome) => {
           const selected = isSelected(fixture.id, outcome.id);
-          const textColour = getProbabilityTextColour(outcome.probability);
-
           return (
             <button
               key={outcome.id}
               onClick={() => handleOutcomeClick(outcome)}
-              className="relative flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all duration-200 cursor-pointer"
+              className="relative flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all duration-200 cursor-pointer overflow-hidden"
               style={
                 selected
                   ? {
-                      border: `1px solid ${C.primary}`,
-                      backgroundColor: 'rgba(91,110,245,0.08)',
+                      background: 'rgba(108,99,255,0.15)',
+                      border: '1px solid rgba(108,99,255,0.6)',
+                      boxShadow: '0 0 20px rgba(108,99,255,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
                     }
                   : {
+                      background: 'rgba(255,255,255,0.03)',
                       border: `1px solid ${C.border}`,
-                      backgroundColor: C.elevated,
                     }
               }
-              onMouseEnter={(e) => {
+              onMouseEnter={e => {
                 if (!selected) {
-                  e.currentTarget.style.borderColor = 'rgba(91,110,245,0.4)';
+                  e.currentTarget.style.background = 'rgba(108,99,255,0.06)';
+                  e.currentTarget.style.borderColor = 'rgba(108,99,255,0.35)';
+                  e.currentTarget.style.transform = 'scale(1.02)';
                 }
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={e => {
                 if (!selected) {
-                  e.currentTarget.style.borderColor = selected ? C.primary : C.border;
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                  e.currentTarget.style.borderColor = C.border;
+                  e.currentTarget.style.transform = 'scale(1)';
                 }
               }}
             >
-              {/* Outcome label */}
               <span
-                className="text-xs uppercase tracking-wider truncate w-full text-center"
+                className="text-[10px] uppercase tracking-widest font-medium"
                 style={{ color: C.textSecondary }}
               >
                 {outcome.label}
               </span>
 
-              {/* HERO probability */}
-              <span className={`font-mono text-2xl font-bold ${textColour}`}>
+              <span
+                className="font-mono text-2xl font-black"
+                style={
+                  selected
+                    ? {
+                        background: 'linear-gradient(135deg, #6C63FF 0%, #B06FFF 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                      }
+                    : { color: '#E8F0FF' }
+                }
+              >
                 {formatOdds(outcome.probability, format)}
               </span>
 
-              {/* Thin probability bar */}
               <div className="w-full">
-                <ProbabilityBar probability={outcome.probability} />
+                <ProbabilityBar probability={outcome.probability} selected={selected} />
               </div>
             </button>
           );
@@ -322,29 +333,27 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
 
       {/* Footer */}
       <div
-        className="flex items-center justify-between px-4 py-2"
-        style={{ borderTop: `1px solid rgba(26,34,56,0.5)` }}
+        className="flex items-center justify-between px-4 py-2.5"
+        style={{ borderTop: `1px solid rgba(255,255,255,0.04)` }}
       >
-        <div className="flex items-center gap-3">
-          {/* Bet count social proof */}
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-3 h-3" style={{ color: C.textMuted }} />
           <span className="text-xs" style={{ color: C.textMuted }}>
-            {betCount.toLocaleString()} bets
+            {betCount.toLocaleString()} bets placed
           </span>
-
-          {/* View Match link */}
-          {onViewMatch && (
-            <button
-              onClick={() => onViewMatch(fixture)}
-              className="flex items-center gap-1 text-xs font-medium transition-colors"
-              style={{ color: C.primary }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#7082F8'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = C.primary; }}
-            >
-              View Match
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          )}
         </div>
+        {onViewMatch && (
+          <button
+            onClick={() => onViewMatch(fixture)}
+            className="flex items-center gap-1 text-xs font-semibold transition-all"
+            style={{ color: '#9B8FFF' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#B0A5FF'; e.currentTarget.style.gap = '6px'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#9B8FFF'; e.currentTarget.style.gap = '4px'; }}
+          >
+            Match Centre
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
     </motion.div>
   );
