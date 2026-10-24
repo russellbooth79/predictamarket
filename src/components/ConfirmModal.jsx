@@ -5,8 +5,7 @@
  * Shows full selection details with a clear summary of the position
  * before final confirmation.
  *
- * Uses Framer Motion for scale-in/out animation on the modal card
- * and a backdrop blur overlay behind it.
+ * bet365 colour scheme: yellow confirm button, dark navy card.
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,7 +30,6 @@ const modalVariants = {
 };
 
 export default function ConfirmModal({ isOpen, selections, stake, potentialReturn, onConfirm, onCancel }) {
-  // Guard: if selections is empty or stake is falsy, bail early
   if (!selections || selections.length === 0) return null;
 
   const parsedStake = parseFloat(stake) || 0;
@@ -54,7 +52,11 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
 
           {/* Modal card */}
           <motion.div
-            className="relative bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            className="relative rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            style={{
+              backgroundColor: '#1a2332',
+              border: '1px solid #2d3f52',
+            }}
             variants={modalVariants}
             initial="hidden"
             animate="visible"
@@ -63,22 +65,22 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
             {/* Close button */}
             <button
               onClick={onCancel}
-              className="absolute top-4 right-4 p-1 text-slate-400 hover:text-slate-200 transition-colors"
+              className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-200 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
 
             {/* Warning header */}
             <div className="flex items-center gap-2 mb-4">
-              <div className="p-2 bg-amber-500/10 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-amber-400" />
+              <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(245,158,11,0.1)' }}>
+                <AlertTriangle className="w-5 h-5" style={{ color: '#f59e0b' }} />
               </div>
-              <h3 className="text-lg font-semibold text-slate-100">
+              <h3 className="text-lg font-semibold text-white">
                 Confirm Position
               </h3>
             </div>
 
-            <p className="text-sm text-slate-400 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               You are placing a position of <span className="font-mono text-white font-medium">£{parsedStake.toFixed(2)}</span>. Please review your selection{selections.length > 1 ? 's' : ''} below.
             </p>
 
@@ -89,11 +91,15 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
                 return (
                   <div
                     key={`${sel.eventId}-${sel.outcomeId}`}
-                    className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50"
+                    className="rounded-lg p-3"
+                    style={{
+                      backgroundColor: 'rgba(36,48,64,0.5)',
+                      border: '1px solid rgba(45,63,82,0.5)',
+                    }}
                   >
-                    <p className="text-xs text-slate-400 mb-0.5">{sel.eventName}</p>
+                    <p className="text-xs text-gray-400 mb-0.5">{sel.eventName}</p>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-200">
+                      <span className="text-sm font-medium text-gray-200">
                         {sel.outcomeName}
                       </span>
                       <span className={`font-mono text-sm font-bold ${textColour}`}>
@@ -101,7 +107,7 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
                       </span>
                     </div>
                     <div className="text-right">
-                      <span className="font-mono text-xs text-slate-500">
+                      <span className="font-mono text-xs text-gray-500">
                         @ {sel.decimalOdds.toFixed(2)}
                       </span>
                     </div>
@@ -111,16 +117,16 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
             </div>
 
             {/* Summary line */}
-            <div className="flex items-center justify-between py-3 border-t border-slate-700/50 mb-5">
+            <div className="flex items-center justify-between py-3 mb-5" style={{ borderTop: '1px solid rgba(45,63,82,0.5)' }}>
               <div>
-                <p className="text-xs text-slate-400">Stake</p>
+                <p className="text-xs text-gray-400">Stake</p>
                 <p className="font-mono text-base font-bold text-white">
                   £{parsedStake.toFixed(2)}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-slate-400">Potential Return</p>
-                <p className="font-mono text-base font-bold text-emerald-400">
+                <p className="text-xs text-gray-400">Potential Return</p>
+                <p className="font-mono text-base font-bold" style={{ color: '#00b67a' }}>
                   £{potentialReturn.toFixed(2)}
                 </p>
               </div>
@@ -130,13 +136,23 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
             <div className="flex items-center gap-3">
               <button
                 onClick={onCancel}
-                className="flex-1 px-4 py-2.5 rounded-lg border border-slate-600 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white transition-colors"
+                style={{ border: '1px solid #2d3f52' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#243040'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 Cancel
               </button>
               <button
                 onClick={onConfirm}
-                className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/25"
+                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                style={{
+                  backgroundColor: '#ffb800',
+                  color: '#111827',
+                  boxShadow: '0 4px 15px rgba(255,184,0,0.25)',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ffc933'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffb800'}
               >
                 Confirm Position
               </button>

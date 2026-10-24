@@ -7,14 +7,15 @@
  * - Probability percentage (font-mono, coloured by threshold)
  * - ProbabilityBar (thin animated bar)
  * - Decimal odds (small secondary text)
- * - Source badge (bookmaker origin)
  *
  * Clicking an outcome toggles it in the bet slip. Selected state shows
- * an indigo border + tinted background. Only one outcome per event
- * can be selected -- the BetSlipContext enforces this constraint.
+ * a yellow border + tinted background (bet365 brand).
+ *
+ * "View Match" link at footer navigates to MatchDetailView for football.
+ * Source labels removed -- PredictaMarket shows probabilities, not bookmaker origins.
  */
 
-import { Heart, Clock } from 'lucide-react';
+import { Heart, Clock, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { getProbabilityTextColour } from '../data/oddsUtils.js';
@@ -54,7 +55,7 @@ const cardVariants = {
   }),
 };
 
-export default function EventCard({ fixture, index = 0 }) {
+export default function EventCard({ fixture, index = 0, onViewMatch }) {
   const { addSelection, isSelected } = useBetSlip();
 
   function handleOutcomeClick(outcome) {
@@ -65,7 +66,6 @@ export default function EventCard({ fixture, index = 0 }) {
       outcomeName: outcome.label,
       probability: outcome.probability,
       decimalOdds: outcome.decimalOdds,
-      source: fixture.source,
       sport: 'football',
     });
   }
@@ -76,34 +76,55 @@ export default function EventCard({ fixture, index = 0 }) {
       variants={cardVariants}
       initial={index < 3 ? 'hidden' : 'visible'}
       animate="visible"
-      className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden hover:border-slate-700 transition-colors"
+      className="rounded-xl overflow-hidden transition-colors"
+      style={{
+        backgroundColor: '#1a2332',
+        border: '1px solid #2d3f52',
+      }}
+      onMouseEnter={(e) => e.currentTarget.style.borderColor = '#3d5068'}
+      onMouseLeave={(e) => e.currentTarget.style.borderColor = '#2d3f52'}
     >
       {/* Header: competition, time, live badge */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800/50">
+      <div
+        className="flex items-center justify-between px-4 py-2.5"
+        style={{ borderBottom: '1px solid rgba(45,63,82,0.5)' }}
+      >
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
             {fixture.competitionShort}
           </span>
-          <span className="text-slate-700">|</span>
-          <span className="text-xs text-slate-400">
+          <span className="text-gray-600">|</span>
+          <span className="text-xs text-gray-400">
             {formatDateLabel(fixture.kickoff)}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           {fixture.isLive ? (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-red-500/10 border border-red-500/20 rounded-full">
+            <div
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: 'rgba(229,48,47,0.1)',
+                border: '1px solid rgba(229,48,47,0.2)',
+              }}
+            >
               {/* Pulsing dot for live indicator */}
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                <span
+                  className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                  style={{ backgroundColor: '#e5302f' }}
+                />
+                <span
+                  className="relative inline-flex rounded-full h-2 w-2"
+                  style={{ backgroundColor: '#e5302f' }}
+                />
               </span>
-              <span className="text-xs font-semibold text-red-400">
+              <span className="text-xs font-semibold" style={{ color: '#e5302f' }}>
                 {formatKickoff(fixture.kickoff, true, fixture.liveMinute)}
               </span>
             </div>
           ) : (
-            <div className="flex items-center gap-1 text-slate-400">
+            <div className="flex items-center gap-1 text-gray-400">
               <Clock className="w-3.5 h-3.5" />
               <span className="text-xs">{formatKickoff(fixture.kickoff, false, null)}</span>
             </div>
@@ -115,7 +136,7 @@ export default function EventCard({ fixture, index = 0 }) {
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <span className="text-base font-semibold text-slate-100">
+            <span className="text-base font-semibold text-white">
               {fixture.homeTeam}
             </span>
           </div>
@@ -124,16 +145,16 @@ export default function EventCard({ fixture, index = 0 }) {
               <span className="font-mono text-lg font-bold text-white">
                 {fixture.liveScore.home}
               </span>
-              <span className="text-slate-600 text-sm">-</span>
+              <span className="text-gray-600 text-sm">-</span>
               <span className="font-mono text-lg font-bold text-white">
                 {fixture.liveScore.away}
               </span>
             </div>
           ) : (
-            <span className="text-sm text-slate-600 mx-4">vs</span>
+            <span className="text-sm text-gray-600 mx-4">vs</span>
           )}
           <div className="flex-1 text-right">
-            <span className="text-base font-semibold text-slate-100">
+            <span className="text-base font-semibold text-white">
               {fixture.awayTeam}
             </span>
           </div>
@@ -150,18 +171,37 @@ export default function EventCard({ fixture, index = 0 }) {
             <button
               key={outcome.id}
               onClick={() => handleOutcomeClick(outcome)}
-              className={`relative flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all duration-200 cursor-pointer ${
+              className="relative flex flex-col items-center gap-1.5 p-3 rounded-lg transition-all duration-200 cursor-pointer"
+              style={
                 selected
-                  ? 'border-indigo-500 bg-indigo-500/10'
-                  : 'border-slate-700/50 bg-slate-800/50 hover:bg-slate-800 hover:border-slate-600'
-              }`}
+                  ? {
+                      border: '1px solid #ffb800',
+                      backgroundColor: 'rgba(255,184,0,0.1)',
+                    }
+                  : {
+                      border: '1px solid rgba(45,63,82,0.5)',
+                      backgroundColor: 'rgba(36,48,64,0.5)',
+                    }
+              }
+              onMouseEnter={(e) => {
+                if (!selected) {
+                  e.currentTarget.style.backgroundColor = '#243040';
+                  e.currentTarget.style.borderColor = '#3d5068';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!selected) {
+                  e.currentTarget.style.backgroundColor = 'rgba(36,48,64,0.5)';
+                  e.currentTarget.style.borderColor = 'rgba(45,63,82,0.5)';
+                }
+              }}
             >
               {/* Outcome label */}
-              <span className="text-xs text-slate-400 truncate w-full text-center">
+              <span className="text-xs text-gray-400 truncate w-full text-center">
                 {outcome.label}
               </span>
 
-              {/* Probability -- Math.round ensures integer display */}
+              {/* Probability */}
               <span className={`font-mono text-xl font-bold ${textColour}`}>
                 {Math.round(outcome.probability)}%
               </span>
@@ -172,13 +212,8 @@ export default function EventCard({ fixture, index = 0 }) {
               </div>
 
               {/* Decimal odds */}
-              <span className="font-mono text-xs text-slate-500">
+              <span className="font-mono text-xs text-gray-500">
                 {outcome.decimalOdds.toFixed(2)}
-              </span>
-
-              {/* Source badge */}
-              <span className="text-[10px] text-slate-600 uppercase tracking-wider">
-                {fixture.source}
               </span>
             </button>
           );
@@ -186,11 +221,33 @@ export default function EventCard({ fixture, index = 0 }) {
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-4 py-2 border-t border-slate-800/50">
-        <button className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
-          More markets
-        </button>
-        <button className="p-1.5 text-slate-500 hover:text-red-400 transition-colors">
+      <div
+        className="flex items-center justify-between px-4 py-2"
+        style={{ borderTop: '1px solid rgba(45,63,82,0.5)' }}
+      >
+        {/* View Match -- navigates to MatchDetailView */}
+        {onViewMatch ? (
+          <button
+            onClick={() => onViewMatch(fixture)}
+            className="flex items-center gap-1 text-xs font-medium transition-colors"
+            style={{ color: '#ffb800' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#ffc933'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#ffb800'}
+          >
+            View Match
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        ) : (
+          <button
+            className="text-xs transition-colors"
+            style={{ color: '#ffb800' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#ffc933'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#ffb800'}
+          >
+            More markets
+          </button>
+        )}
+        <button className="p-1.5 text-gray-500 hover:text-red-400 transition-colors">
           <Heart className="w-4 h-4" />
         </button>
       </div>

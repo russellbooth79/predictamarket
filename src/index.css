@@ -5,7 +5,14 @@
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', Menlo, monospace;
 
-  --color-slate-950: #020617;
+  /* bet365 brand palette */
+  --color-brand-yellow: #ffb800;
+  --color-brand-bg: #111827;
+  --color-brand-card: #1a2332;
+  --color-brand-elevated: #243040;
+  --color-brand-border: #2d3f52;
+  --color-brand-live: #e5302f;
+  --color-brand-green: #00b67a;
 
   --animate-shake: shake 0.4s ease-in-out;
   --animate-fade-in: fade-in 0.2s ease-out;
@@ -30,6 +37,11 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
+@keyframes slide-in-top {
+  from { transform: translateY(-12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -42,7 +54,7 @@ html, body, #root {
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background-color: #020617;
+  background-color: #111827;
   color: #cbd5e1;
   -webkit-font-smoothing: antialiased;
 }
@@ -59,10 +71,10 @@ body {
   width: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #111827;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #2d3f52;
   border-radius: 2px;
 }
 
@@ -76,4 +88,8 @@ body {
 
 .animate-slide-in-bottom {
   animation: slide-in-bottom 0.3s ease-out;
+}
+
+.animate-slide-in-top {
+  animation: slide-in-top 0.3s ease-out;
 }

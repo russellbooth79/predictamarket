@@ -3,13 +3,19 @@
  *
  * Pure utility functions for odds conversion and probability normalisation.
  *
- * All probability values throughout the app are expressed as integers (0–100).
- * Rounding is applied at the display layer, not here — callers receive floats
+ * All probability values throughout the app are expressed as integers (0-100).
+ * Rounding is applied at the display layer, not here -- callers receive floats
  * so normalisation arithmetic stays accurate before rounding is committed.
  *
- * Colour helpers return Tailwind class strings. These are co-located with the
- * probability domain rather than a UI file so the thresholds stay canonical
- * and are not duplicated across components.
+ * Colour helpers return Tailwind class strings or inline-style-friendly hex
+ * values. Thresholds are co-located with the probability domain so they
+ * remain canonical and are not duplicated across components.
+ *
+ * bet365 brand palette:
+ *   High (>=70%): #00b67a (bet365 green)
+ *   Mid  (>=50%): #ffb800 (bet365 yellow)
+ *   Toss-up (>=35%): #f59e0b (amber-500)
+ *   Low  (<35%): #64748b (slate-500)
  */
 
 /**
@@ -17,9 +23,6 @@
  * probability as a percentage float.
  *
  * Implied probability = denominator / (numerator + denominator) * 100
- *
- * This is the raw bookmaker-margined probability. Pass through normaliseProbs
- * before displaying to users.
  *
  * @param {string} fractional - Fractional odds in "numerator/denominator" format
  * @returns {number} Implied probability as a percentage (e.g. 30.77)
@@ -44,11 +47,6 @@ export function fractionalToProb(fractional) {
  * Convert decimal odds (e.g. 3.25, 1.85, 1.10) to implied probability as a
  * percentage float.
  *
- * Implied probability = (1 / decimal) * 100
- *
- * Decimal odds include the stake in the return, so 1.0 would be a certainty.
- * Valid decimal odds must be > 1.0 in practice.
- *
  * @param {number} decimal - Decimal odds value
  * @returns {number} Implied probability as a percentage (e.g. 30.77)
  */
@@ -62,13 +60,6 @@ export function decimalToProb(decimal) {
 
 /**
  * Normalise an array of raw implied probabilities so they sum to exactly 100.
- *
- * Raw bookmaker odds always sum to more than 100% — the overround (margin) is
- * the bookmaker's edge. Removing it gives the "true" market-implied probability,
- * which is what PredictaMarket displays.
- *
- * Method: divide each probability by the sum of all probabilities, then
- * multiply by 100.
  *
  * @param {number[]} probs - Array of raw implied probabilities (need not sum to 100)
  * @returns {number[]} Normalised probabilities that sum to 100, same order as input
@@ -89,8 +80,6 @@ export function normaliseProbs(probs) {
 
 /**
  * Round a normalised probability to a whole number for display.
- * Kept as a separate function so callers can choose when to round —
- * rounding mid-calculation corrupts normalisation.
  *
  * @param {number} prob - Float probability
  * @returns {number} Integer probability
@@ -101,43 +90,50 @@ export function roundProb(prob) {
 
 /**
  * Get the Tailwind background colour class appropriate for a given probability.
+ * Uses bet365 brand colours for semantic probability tiers.
  *
- * Thresholds represent the semantic meaning of confidence levels:
- *   >= 70%  Strong favourite   — emerald (green)
- *   >= 50%  Moderate favourite — indigo (blue-purple)
- *   >= 35%  Competitive        — amber (yellow)
- *   <  35%  Outsider           — slate (grey)
- *
- * @param {number} pct - Probability percentage (0–100)
- * @returns {string} Tailwind bg class
+ * @param {number} pct - Probability percentage (0-100)
+ * @returns {string} Tailwind-compatible bg class (uses arbitrary values for brand colours)
  */
 export function getProbabilityColour(pct) {
-  if (pct >= 70) return 'bg-emerald-500';
-  if (pct >= 50) return 'bg-indigo-500';
-  if (pct >= 35) return 'bg-amber-400';
-  return 'bg-slate-500';
+  if (pct >= 70) return 'bg-[#00b67a]';
+  if (pct >= 50) return 'bg-[#ffb800]';
+  if (pct >= 35) return 'bg-[#f59e0b]';
+  return 'bg-[#64748b]';
+}
+
+/**
+ * Get the hex colour string for a given probability.
+ * Used for inline styles where Tailwind classes are not appropriate.
+ *
+ * @param {number} pct - Probability percentage (0-100)
+ * @returns {string} Hex colour value
+ */
+export function getProbabilityHex(pct) {
+  if (pct >= 70) return '#00b67a';
+  if (pct >= 50) return '#ffb800';
+  if (pct >= 35) return '#f59e0b';
+  return '#64748b';
 }
 
 /**
  * Get the Tailwind text colour class appropriate for a given probability.
- * Mirrors getProbabilityColour thresholds for consistent semantic colouring
- * across background and text contexts.
+ * Uses bet365 brand colours for consistency with getProbabilityColour.
  *
- * @param {number} pct - Probability percentage (0–100)
- * @returns {string} Tailwind text class
+ * @param {number} pct - Probability percentage (0-100)
+ * @returns {string} Tailwind-compatible text class (uses arbitrary values for brand colours)
  */
 export function getProbabilityTextColour(pct) {
-  if (pct >= 70) return 'text-emerald-400';
-  if (pct >= 50) return 'text-indigo-400';
-  if (pct >= 35) return 'text-amber-400';
-  return 'text-slate-400';
+  if (pct >= 70) return 'text-[#00b67a]';
+  if (pct >= 50) return 'text-[#ffb800]';
+  if (pct >= 35) return 'text-[#f59e0b]';
+  return 'text-gray-400';
 }
 
 /**
  * Format a probability percentage for display.
- * Always returns an integer string with % suffix.
  *
- * @param {number} pct - Probability (0–100, float or int)
+ * @param {number} pct - Probability (0-100, float or int)
  * @returns {string} e.g. "52%"
  */
 export function formatProb(pct) {
@@ -146,16 +142,11 @@ export function formatProb(pct) {
 
 /**
  * Convert decimal odds to a display-friendly fractional string.
- * Used when showing odds alongside probabilities for context.
- * Approximation only — uses common fractions table for recognisable values,
- * falls back to decimal string for unusual odds.
  *
  * @param {number} decimal - Decimal odds
  * @returns {string} Fractional representation or decimal string
  */
 export function decimalToFractionalDisplay(decimal) {
-  // Common bookmaker odds mappings — these are the values that appear on
-  // price boards and are immediately recognisable to UK bettors.
   const COMMON_FRACTIONS = {
     1.1: '1/10',
     1.125: '1/8',
@@ -200,7 +191,6 @@ export function decimalToFractionalDisplay(decimal) {
     101.0: '100/1',
   };
 
-  // Find nearest match within a small tolerance for float comparison
   const match = Object.keys(COMMON_FRACTIONS).find(
     (key) => Math.abs(parseFloat(key) - decimal) < 0.02
   );

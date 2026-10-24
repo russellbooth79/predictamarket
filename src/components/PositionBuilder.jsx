@@ -10,9 +10,7 @@
  * 4. Stake >= 20: ConfirmModal gates the submission
  * 5. On success: balance deducts, bet recorded, success state shown 2.5s, then reset
  *
- * Potential return calculation: stake / (probability / 100)
- * This converts the probability into implied decimal odds for the return.
- * For a 50% probability with 10 stake: 10 / 0.5 = 20 return.
+ * bet365 colour scheme: yellow brand accent, dark navy panels.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -51,18 +49,11 @@ export default function PositionBuilder() {
 
   const stakeNum = parseFloat(stake) || 0;
 
-  // Potential return: for singles, use the first selection's probability.
-  // In a multi-selection accumulator you'd multiply probabilities --
-  // this prototype supports singles only (one outcome per placement).
   const potentialReturn =
     selections.length > 0 && stakeNum > 0
       ? parseFloat((stakeNum / (selections[0].probability / 100)).toFixed(2))
       : 0;
 
-  /**
-   * Handle the confirm/place flow.
-   * Stakes >= 20 show the confirmation modal first.
-   */
   function handlePlacePosition() {
     if (stakeNum <= 0 || selections.length === 0) return;
 
@@ -78,7 +69,6 @@ export default function PositionBuilder() {
     }
   }
 
-  /** Run the actual submission after optional confirmation. */
   const executeSubmission = useCallback(async () => {
     submit();
     try {
@@ -100,7 +90,6 @@ export default function PositionBuilder() {
     }
   }, [status, reset]);
 
-  // Validate stake input -- allow only numeric values with up to 2 decimal places
   function handleStakeChange(value) {
     if (value === '') {
       setStake('');
@@ -113,16 +102,18 @@ export default function PositionBuilder() {
 
   const hasSelections = selections.length > 0;
 
-  // Desktop panel content (also used in mobile sheet)
   const panelContent = (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #2d3f52' }}>
         <div className="flex items-center gap-2">
-          <LayoutGrid className="w-4 h-4 text-indigo-400" />
-          <h2 className="text-sm font-semibold text-slate-100">Position Builder</h2>
+          <LayoutGrid className="w-4 h-4" style={{ color: '#ffb800' }} />
+          <h2 className="text-sm font-semibold text-white">Position Builder</h2>
           {hasSelections && (
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+            <span
+              className="flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-gray-900"
+              style={{ backgroundColor: '#ffb800' }}
+            >
               {selections.length}
             </span>
           )}
@@ -130,7 +121,7 @@ export default function PositionBuilder() {
         {hasSelections && status === 'idle' && (
           <button
             onClick={clearAll}
-            className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-400 transition-colors"
+            className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-400 transition-colors"
           >
             <Trash2 className="w-3 h-3" />
             Clear all
@@ -152,12 +143,12 @@ export default function PositionBuilder() {
               animate={{ scale: 1 }}
               transition={{ type: 'spring', damping: 15, stiffness: 200, delay: 0.1 }}
             >
-              <CheckCircle className="w-16 h-16 text-emerald-400 mb-4" />
+              <CheckCircle className="w-16 h-16 mb-4" style={{ color: '#00b67a' }} />
             </motion.div>
-            <h3 className="text-lg font-semibold text-slate-100 mb-1">
+            <h3 className="text-lg font-semibold text-white mb-1">
               Position Placed!
             </h3>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-gray-400">
               Good luck with your prediction.
             </p>
           </motion.div>
@@ -166,14 +157,17 @@ export default function PositionBuilder() {
         {/* Error state */}
         {status === 'error' && (
           <div className="flex flex-col items-center justify-center py-12 px-4">
-            <AlertCircle className="w-12 h-12 text-red-400 mb-3" />
-            <h3 className="text-sm font-semibold text-slate-100 mb-1">
+            <AlertCircle className="w-12 h-12 mb-3" style={{ color: '#e5302f' }} />
+            <h3 className="text-sm font-semibold text-white mb-1">
               Something went wrong
             </h3>
-            <p className="text-xs text-slate-400 mb-4">Please try again.</p>
+            <p className="text-xs text-gray-400 mb-4">Please try again.</p>
             <button
               onClick={cancel}
-              className="px-4 py-2 rounded-lg border border-slate-600 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-lg text-sm text-gray-300 hover:text-white transition-colors"
+              style={{ border: '1px solid #2d3f52' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#243040'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               Try Again
             </button>
@@ -183,19 +177,22 @@ export default function PositionBuilder() {
         {/* Insufficient funds state */}
         {status === 'insufficientFunds' && (
           <div className="flex flex-col items-center justify-center py-12 px-4">
-            <AlertCircle className="w-12 h-12 text-amber-400 mb-3" />
-            <h3 className="text-sm font-semibold text-slate-100 mb-1">
+            <AlertCircle className="w-12 h-12 mb-3" style={{ color: '#f59e0b' }} />
+            <h3 className="text-sm font-semibold text-white mb-1">
               Insufficient Funds
             </h3>
-            <p className="text-xs text-slate-400 mb-1">
+            <p className="text-xs text-gray-400 mb-1">
               Your balance is <span className="font-mono text-white">£{user.balance.toFixed(2)}</span>
             </p>
-            <p className="text-xs text-slate-400 mb-4">
+            <p className="text-xs text-gray-400 mb-4">
               Reduce your stake or add funds to continue.
             </p>
             <button
               onClick={cancel}
-              className="px-4 py-2 rounded-lg border border-slate-600 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-lg text-sm text-gray-300 hover:text-white transition-colors"
+              style={{ border: '1px solid #2d3f52' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#243040'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               Go Back
             </button>
@@ -205,21 +202,24 @@ export default function PositionBuilder() {
         {/* Submitting state */}
         {status === 'submitting' && (
           <div className="flex flex-col items-center justify-center py-16 px-4">
-            <Loader2 className="w-10 h-10 text-indigo-400 animate-spin mb-4" />
-            <p className="text-sm text-slate-400">Placing your position...</p>
+            <Loader2 className="w-10 h-10 animate-spin mb-4" style={{ color: '#ffb800' }} />
+            <p className="text-sm text-gray-400">Placing your position...</p>
           </div>
         )}
 
         {/* Empty state */}
         {!hasSelections && status === 'idle' && (
           <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-            <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mb-3">
-              <LayoutGrid className="w-6 h-6 text-slate-600" />
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
+              style={{ backgroundColor: '#243040' }}
+            >
+              <LayoutGrid className="w-6 h-6 text-gray-600" />
             </div>
-            <h3 className="text-sm font-medium text-slate-400 mb-1">
+            <h3 className="text-sm font-medium text-gray-400 mb-1">
               No selections yet
             </h3>
-            <p className="text-xs text-slate-500 max-w-[200px]">
+            <p className="text-xs text-gray-500 max-w-[200px]">
               Click on any outcome to add it to your position builder.
             </p>
           </div>
@@ -239,21 +239,25 @@ export default function PositionBuilder() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50"
+                    className="rounded-lg p-3"
+                    style={{
+                      backgroundColor: 'rgba(36,48,64,0.5)',
+                      border: '1px solid rgba(45,63,82,0.5)',
+                    }}
                   >
                     <div className="flex items-start justify-between mb-1">
-                      <p className="text-xs text-slate-400 pr-2 leading-tight">
+                      <p className="text-xs text-gray-400 pr-2 leading-tight">
                         {sel.eventName}
                       </p>
                       <button
                         onClick={() => removeSelection(sel.eventId)}
-                        className="p-0.5 text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                        className="p-0.5 text-gray-500 hover:text-red-400 transition-colors shrink-0"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-200">
+                      <span className="text-sm font-medium text-gray-200">
                         {sel.outcomeName}
                       </span>
                       <span className={`font-mono text-sm font-bold ${textColour}`}>
@@ -268,20 +272,33 @@ export default function PositionBuilder() {
         )}
       </div>
 
-      {/* Stake section -- only when there are selections and status is idle/confirming */}
+      {/* Stake section */}
       {hasSelections && (status === 'idle' || status === 'confirming') && (
-        <div className="border-t border-slate-800 px-4 py-3 space-y-3">
+        <div className="px-4 py-3 space-y-3" style={{ borderTop: '1px solid #2d3f52' }}>
           {/* Quick stake buttons */}
           <div className="flex gap-2">
             {QUICK_STAKES.map((amount) => (
               <button
                 key={amount}
                 onClick={() => setStake(String(amount))}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                style={
                   stakeNum === amount
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
-                }`}
+                    ? { backgroundColor: '#ffb800', color: '#111827' }
+                    : { backgroundColor: '#243040', color: '#94a3b8' }
+                }
+                onMouseEnter={(e) => {
+                  if (stakeNum !== amount) {
+                    e.currentTarget.style.backgroundColor = '#2d3f52';
+                    e.currentTarget.style.color = '#e2e8f0';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (stakeNum !== amount) {
+                    e.currentTarget.style.backgroundColor = '#243040';
+                    e.currentTarget.style.color = '#94a3b8';
+                  }
+                }}
               >
                 £{amount}
               </button>
@@ -290,7 +307,7 @@ export default function PositionBuilder() {
 
           {/* Stake input */}
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-mono text-sm">
               £
             </span>
             <input
@@ -299,15 +316,27 @@ export default function PositionBuilder() {
               value={stake}
               onChange={(e) => handleStakeChange(e.target.value)}
               placeholder="0.00"
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-7 pr-3 py-2.5 font-mono text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-colors"
+              className="w-full rounded-lg pl-7 pr-3 py-2.5 font-mono text-sm text-white placeholder-gray-500 focus:outline-none transition-colors"
+              style={{
+                backgroundColor: '#243040',
+                border: '1px solid #2d3f52',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = '#ffb800';
+                e.currentTarget.style.boxShadow = '0 0 0 1px rgba(255,184,0,0.3)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = '#2d3f52';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             />
           </div>
 
           {/* Potential return */}
           {stakeNum > 0 && (
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400">Potential Return</span>
-              <span className="font-mono text-sm font-bold text-emerald-400">
+              <span className="text-xs text-gray-400">Potential Return</span>
+              <span className="font-mono text-sm font-bold" style={{ color: '#00b67a' }}>
                 £{potentialReturn.toFixed(2)}
               </span>
             </div>
@@ -317,11 +346,26 @@ export default function PositionBuilder() {
           <button
             onClick={handlePlacePosition}
             disabled={stakeNum <= 0}
-            className={`w-full py-3 rounded-xl text-sm font-semibold transition-all ${
+            className="w-full py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer"
+            style={
               stakeNum > 0
-                ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-600/25 cursor-pointer'
-                : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-            }`}
+                ? {
+                    backgroundColor: '#ffb800',
+                    color: '#111827',
+                    boxShadow: '0 4px 15px rgba(255,184,0,0.25)',
+                  }
+                : {
+                    backgroundColor: '#243040',
+                    color: '#64748b',
+                    cursor: 'not-allowed',
+                  }
+            }
+            onMouseEnter={(e) => {
+              if (stakeNum > 0) e.currentTarget.style.backgroundColor = '#ffc933';
+            }}
+            onMouseLeave={(e) => {
+              if (stakeNum > 0) e.currentTarget.style.backgroundColor = '#ffb800';
+            }}
           >
             {stakeNum >= HIGH_STAKE_THRESHOLD
               ? `Confirm Position  ·  £${stakeNum.toFixed(2)}`
@@ -332,17 +376,17 @@ export default function PositionBuilder() {
         </div>
       )}
 
-      {/* Responsible gambling footer -- always visible */}
-      <div className="border-t border-slate-800 px-4 py-3 mt-auto">
-        <div className="flex items-center justify-between text-[10px] text-slate-500">
-          <button className="hover:text-slate-300 transition-colors underline">
+      {/* Responsible gambling footer */}
+      <div className="px-4 py-3 mt-auto" style={{ borderTop: '1px solid #2d3f52' }}>
+        <div className="flex items-center justify-between text-[10px] text-gray-500">
+          <button className="hover:text-gray-300 transition-colors underline">
             Deposit Limits
           </button>
           <span>18+ | BeGambleAware.org</span>
         </div>
       </div>
 
-      {/* Confirm modal -- rendered inside the component tree but portals to overlay */}
+      {/* Confirm modal */}
       <ConfirmModal
         isOpen={status === 'confirming'}
         selections={selections}
@@ -356,22 +400,35 @@ export default function PositionBuilder() {
 
   return (
     <>
-      {/* Desktop panel -- hidden on mobile */}
-      <aside className="hidden lg:flex flex-col fixed right-0 top-14 bottom-0 w-80 bg-slate-900 border-l border-slate-800 z-30">
+      {/* Desktop panel */}
+      <aside
+        className="hidden lg:flex flex-col fixed right-0 top-14 bottom-0 w-80 z-30"
+        style={{
+          backgroundColor: '#1a2332',
+          borderLeft: '1px solid #2d3f52',
+        }}
+      >
         {panelContent}
       </aside>
 
       {/* Mobile floating action button + bottom sheet */}
       <div className="lg:hidden">
-        {/* FAB -- shows selection count */}
+        {/* FAB */}
         {hasSelections && !mobileOpen && (
           <button
             onClick={() => setMobileOpen(true)}
-            className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 flex items-center justify-center"
+            className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full text-gray-900 flex items-center justify-center"
+            style={{
+              backgroundColor: '#ffb800',
+              boxShadow: '0 4px 15px rgba(255,184,0,0.3)',
+            }}
           >
             <div className="relative">
               <LayoutGrid className="w-6 h-6" />
-              <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-[10px] font-bold flex items-center justify-center">
+              <span
+                className="absolute -top-2 -right-2 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center text-white"
+                style={{ backgroundColor: '#e5302f' }}
+              >
                 {selections.length}
               </span>
             </div>
@@ -394,11 +451,15 @@ export default function PositionBuilder() {
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 rounded-t-2xl border-t border-slate-700 max-h-[85vh] flex flex-col"
+                className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl max-h-[85vh] flex flex-col"
+                style={{
+                  backgroundColor: '#1a2332',
+                  borderTop: '1px solid #2d3f52',
+                }}
               >
                 {/* Drag handle */}
                 <div className="flex justify-center py-2">
-                  <div className="w-10 h-1 rounded-full bg-slate-700" />
+                  <div className="w-10 h-1 rounded-full" style={{ backgroundColor: '#2d3f52' }} />
                 </div>
                 {panelContent}
               </motion.div>

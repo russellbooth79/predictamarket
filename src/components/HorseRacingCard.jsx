@@ -7,6 +7,9 @@
  *
  * Clicking a runner row adds it to the bet slip. The selected runner
  * gets a highlighted row background.
+ *
+ * Source labels removed -- PredictaMarket branding only.
+ * bet365 colour scheme applied throughout.
  */
 
 import { Clock, MapPin } from 'lucide-react';
@@ -51,7 +54,6 @@ export default function HorseRacingCard({ fixture, index = 0 }) {
       outcomeName: runner.name,
       probability: runner.probability,
       decimalOdds: runner.decimalOdds,
-      source: fixture.source,
       sport: 'horseracing',
     });
   }
@@ -62,18 +64,24 @@ export default function HorseRacingCard({ fixture, index = 0 }) {
       variants={cardVariants}
       initial={index < 3 ? 'hidden' : 'visible'}
       animate="visible"
-      className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden hover:border-slate-700 transition-colors"
+      className="rounded-xl overflow-hidden transition-colors"
+      style={{
+        backgroundColor: '#1a2332',
+        border: '1px solid #2d3f52',
+      }}
+      onMouseEnter={(e) => e.currentTarget.style.borderColor = '#3d5068'}
+      onMouseLeave={(e) => e.currentTarget.style.borderColor = '#2d3f52'}
     >
       {/* Header: venue, race name, time, metadata */}
-      <div className="px-4 py-3 border-b border-slate-800/50">
+      <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(45,63,82,0.5)' }}>
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="text-sm font-semibold text-slate-100">
+            <MapPin className="w-3.5 h-3.5" style={{ color: '#ffb800' }} />
+            <span className="text-sm font-semibold text-white">
               {fixture.competition}
             </span>
           </div>
-          <div className="flex items-center gap-1 text-slate-400">
+          <div className="flex items-center gap-1 text-gray-400">
             <Clock className="w-3.5 h-3.5" />
             <span className="text-xs">
               {formatDateLabel(fixture.raceTime)} {formatRaceTime(fixture.raceTime)}
@@ -81,18 +89,21 @@ export default function HorseRacingCard({ fixture, index = 0 }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-300">{fixture.raceName}</span>
-          <span className="text-slate-700">|</span>
-          <span className="text-xs text-slate-500">{fixture.distance}</span>
-          <span className="text-slate-700">|</span>
-          <span className="text-xs text-slate-500">{fixture.going}</span>
-          <span className="text-slate-700">|</span>
-          <span className="text-xs text-slate-500">{fixture.raceClass}</span>
+          <span className="text-sm text-gray-300">{fixture.raceName}</span>
+          <span className="text-gray-600">|</span>
+          <span className="text-xs text-gray-500">{fixture.distance}</span>
+          <span className="text-gray-600">|</span>
+          <span className="text-xs text-gray-500">{fixture.going}</span>
+          <span className="text-gray-600">|</span>
+          <span className="text-xs text-gray-500">{fixture.raceClass}</span>
         </div>
       </div>
 
       {/* Runner table header */}
-      <div className="hidden sm:grid grid-cols-[2rem_1fr_6rem_6rem_4rem_8rem_3.5rem_3.5rem] gap-1 px-4 py-1.5 text-xs text-slate-500 uppercase tracking-wider border-b border-slate-800/30">
+      <div
+        className="hidden sm:grid grid-cols-[2rem_1fr_6rem_6rem_4rem_8rem_3.5rem_3.5rem] gap-1 px-4 py-1.5 text-xs text-gray-500 uppercase tracking-wider"
+        style={{ borderBottom: '1px solid rgba(45,63,82,0.3)' }}
+      >
         <span>#</span>
         <span>Horse</span>
         <span>Jockey</span>
@@ -104,7 +115,7 @@ export default function HorseRacingCard({ fixture, index = 0 }) {
       </div>
 
       {/* Runner rows */}
-      <div className="divide-y divide-slate-800/30">
+      <div className="divide-y" style={{ borderColor: 'rgba(45,63,82,0.3)' }}>
         {fixture.runners.map((runner) => {
           const selected = isSelected(fixture.id, runner.id);
           const textColour = getProbabilityTextColour(runner.probability);
@@ -113,32 +124,44 @@ export default function HorseRacingCard({ fixture, index = 0 }) {
             <button
               key={runner.id}
               onClick={() => handleRunnerClick(runner)}
-              className={`w-full text-left transition-colors cursor-pointer ${
+              className="w-full text-left transition-colors cursor-pointer"
+              style={
                 selected
-                  ? 'bg-indigo-500/10 border-l-2 border-l-indigo-500'
-                  : 'hover:bg-slate-800/50 border-l-2 border-l-transparent'
-              }`}
+                  ? {
+                      backgroundColor: 'rgba(255,184,0,0.1)',
+                      borderLeft: '2px solid #ffb800',
+                    }
+                  : {
+                      borderLeft: '2px solid transparent',
+                    }
+              }
+              onMouseEnter={(e) => {
+                if (!selected) e.currentTarget.style.backgroundColor = 'rgba(36,48,64,0.5)';
+              }}
+              onMouseLeave={(e) => {
+                if (!selected) e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               {/* Desktop layout */}
               <div className="hidden sm:grid grid-cols-[2rem_1fr_6rem_6rem_4rem_8rem_3.5rem_3.5rem] gap-1 items-center px-4 py-2.5">
-                <span className="font-mono text-xs text-slate-500">
+                <span className="font-mono text-xs text-gray-500">
                   {runner.saddleNumber}
                 </span>
                 <div>
-                  <span className="text-sm font-medium text-slate-200">
+                  <span className="text-sm font-medium text-gray-200">
                     {runner.name}
                   </span>
                 </div>
-                <span className="text-xs text-slate-400 truncate">{runner.jockey}</span>
-                <span className="text-xs text-slate-500 truncate">{runner.trainer}</span>
-                <span className="font-mono text-xs text-slate-400">{runner.form}</span>
+                <span className="text-xs text-gray-400 truncate">{runner.jockey}</span>
+                <span className="text-xs text-gray-500 truncate">{runner.trainer}</span>
+                <span className="font-mono text-xs text-gray-400">{runner.form}</span>
                 <div className="px-1">
                   <ProbabilityBar probability={runner.probability} />
                 </div>
                 <span className={`font-mono text-sm font-bold text-right ${textColour}`}>
                   {Math.round(runner.probability)}%
                 </span>
-                <span className="font-mono text-xs text-slate-400 text-right">
+                <span className="font-mono text-xs text-gray-400 text-right">
                   {runner.fractionalOdds}
                 </span>
               </div>
@@ -147,10 +170,10 @@ export default function HorseRacingCard({ fixture, index = 0 }) {
               <div className="sm:hidden px-4 py-2.5">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-slate-500 w-5">
+                    <span className="font-mono text-xs text-gray-500 w-5">
                       {runner.saddleNumber}
                     </span>
-                    <span className="text-sm font-medium text-slate-200">
+                    <span className="text-sm font-medium text-gray-200">
                       {runner.name}
                     </span>
                   </div>
@@ -158,14 +181,14 @@ export default function HorseRacingCard({ fixture, index = 0 }) {
                     <span className={`font-mono text-sm font-bold ${textColour}`}>
                       {Math.round(runner.probability)}%
                     </span>
-                    <span className="font-mono text-xs text-slate-400">
+                    <span className="font-mono text-xs text-gray-400">
                       {runner.fractionalOdds}
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 mb-1.5 ml-7">
-                  <span className="text-xs text-slate-400">{runner.jockey}</span>
-                  <span className="text-xs text-slate-500">{runner.form}</span>
+                  <span className="text-xs text-gray-400">{runner.jockey}</span>
+                  <span className="text-xs text-gray-500">{runner.form}</span>
                 </div>
                 <div className="ml-7">
                   <ProbabilityBar probability={runner.probability} />
@@ -176,12 +199,12 @@ export default function HorseRacingCard({ fixture, index = 0 }) {
         })}
       </div>
 
-      {/* Footer with source */}
-      <div className="px-4 py-2 border-t border-slate-800/50 flex items-center justify-between">
-        <span className="text-[10px] text-slate-600 uppercase tracking-wider">
-          Prices from {fixture.source}
-        </span>
-        <span className="text-xs text-slate-500">
+      {/* Footer -- source removed */}
+      <div
+        className="px-4 py-2 flex items-center justify-end"
+        style={{ borderTop: '1px solid rgba(45,63,82,0.5)' }}
+      >
+        <span className="text-xs text-gray-500">
           {fixture.runners.length} runners
         </span>
       </div>
