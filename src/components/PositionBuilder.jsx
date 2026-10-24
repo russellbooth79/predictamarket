@@ -596,7 +596,7 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
         {hasSelections && !mobileOpen && (
           <button
             onClick={() => setMobileOpen(true)}
-            className="fixed bottom-20 right-6 z-50 w-14 h-14 rounded-full text-white flex items-center justify-center"
+            className="fixed bottom-20 right-6 z-[60] w-14 h-14 rounded-full text-white flex items-center justify-center"
             style={{
               background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)',
               boxShadow: '0 6px 20px rgba(108,99,255,0.5)',
@@ -621,7 +621,7 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50"
+                className="fixed inset-0 z-[70]"
                 style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
                 onClick={() => setMobileOpen(false)}
               />
@@ -630,7 +630,7 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl max-h-[85vh] flex flex-col"
+                className="fixed bottom-0 left-0 right-0 z-[80] rounded-t-3xl max-h-[85vh] flex flex-col"
                 style={{
                   background: 'rgba(8,12,20,0.97)',
                   backdropFilter: 'blur(24px)',

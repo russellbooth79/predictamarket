@@ -39,6 +39,7 @@ import TennisCard from './components/TennisCard.jsx';
 import FightCard from './components/FightCard.jsx';
 import AmericanSportsCard from './components/AmericanSportsCard.jsx';
 import DiscoverySurface from './components/DiscoverySurface.jsx';
+import LiveTicker from './components/LiveTicker.jsx';
 import PositionBuilder from './components/PositionBuilder.jsx';
 import MyBets from './components/MyBets.jsx';
 import MatchDetailView from './components/MatchDetailView.jsx';
@@ -48,21 +49,21 @@ import {
   ChevronRight, Clock, Activity,
 } from 'lucide-react';
 
-// ── Colour palette ────────────────────────────────────────────────────────────
+// ── Colour palette — v4 dark sport futurism ───────────────────────────────────
 
 const C = {
-  bg: '#080C14',
-  sidebar: 'rgba(15,21,32,0.85)',
-  sidebarBorder: '#1A2238',
-  elevated: '#161E2E',
-  border: '#1A2238',
-  primary: '#5B6EF5',
-  primaryGlow: 'rgba(91,110,245,0.15)',
-  liveRed: '#FF6B6B',
-  green: '#A8FF3E',
-  text: '#f0f4ff',
-  textSecondary: '#8A97B4',
-  textMuted: '#4a5568',
+  bg: '#05080F',
+  sidebar: 'rgba(8,12,20,0.9)',
+  sidebarBorder: 'rgba(255,255,255,0.07)',
+  elevated: 'rgba(255,255,255,0.04)',
+  border: 'rgba(255,255,255,0.07)',
+  primary: '#6C63FF',
+  primaryGlow: 'rgba(108,99,255,0.2)',
+  liveRed: '#FF3366',
+  green: '#00F5A0',
+  text: '#F0F6FF',
+  textSecondary: '#7B8CAA',
+  textMuted: '#3A4560',
 };
 
 // ── Sidebar competition config ────────────────────────────────────────────────
@@ -165,14 +166,14 @@ function LiveView({ allFixtures, onViewMatch }) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center px-4">
         <div
-          className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-          style={{ backgroundColor: C.elevated }}
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+          style={{ background: 'rgba(255,51,102,0.08)', border: '1px solid rgba(255,51,102,0.15)' }}
         >
-          <Zap className="w-7 h-7" style={{ color: C.textMuted }} />
+          <Zap className="w-7 h-7" style={{ color: '#FF3366', opacity: 0.6 }} />
         </div>
-        <h3 className="text-lg font-semibold mb-2" style={{ color: C.text }}>No live events right now</h3>
+        <h3 className="text-lg font-black font-display mb-2" style={{ color: C.text }}>No live events right now</h3>
         <p className="text-sm max-w-xs" style={{ color: C.textSecondary }}>
-          Events appear here as they kick off. Check back soon or browse upcoming fixtures in Markets.
+          Events appear here as they kick off. Check back soon or browse upcoming fixtures.
         </p>
       </div>
     );
@@ -180,15 +181,15 @@ function LiveView({ allFixtures, onViewMatch }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-5">
+      <div className="flex items-center gap-2.5 mb-5">
         <span className="relative flex h-2.5 w-2.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: C.liveRed }} />
-          <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ backgroundColor: C.liveRed }} />
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full" style={{ backgroundColor: '#FF3366', opacity: 0.75 }} />
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ backgroundColor: '#FF3366' }} />
         </span>
-        <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: C.liveRed }}>Live Now</h2>
+        <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: '#FF3366' }}>Live Now</h2>
         <span
-          className="text-xs font-mono px-2 py-0.5 rounded-full"
-          style={{ backgroundColor: 'rgba(255,107,107,0.12)', color: C.liveRed }}
+          className="text-xs font-mono font-bold px-2 py-0.5 rounded-full"
+          style={{ background: 'rgba(255,51,102,0.12)', color: '#FF3366', border: '1px solid rgba(255,51,102,0.2)' }}
         >
           {liveEvents.length}
         </span>
@@ -221,9 +222,9 @@ function MarketsView({ onSportSelect, fixtureCounts }) {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-1" style={{ color: C.text }}>All Markets</h1>
+        <h1 className="text-2xl font-black font-display mb-1" style={{ color: C.text }}>All Markets</h1>
         <p className="text-sm" style={{ color: C.textSecondary }}>
-          Browse every sport and competition available right now.
+          Every sport. Every competition. Right now.
         </p>
       </div>
 
@@ -235,30 +236,37 @@ function MarketsView({ onSportSelect, fixtureCounts }) {
               key={tile.id}
               onClick={() => onSportSelect(tile.id)}
               className="rounded-2xl p-4 text-left transition-all duration-200"
-              style={{ backgroundColor: C.elevated, border: `1px solid ${C.border}` }}
+              style={{
+                background: 'rgba(12,17,30,0.75)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.07)',
+              }}
               onMouseEnter={e => {
-                e.currentTarget.style.borderColor = C.primary;
-                e.currentTarget.style.boxShadow = `0 0 0 1px ${C.primaryGlow}`;
+                e.currentTarget.style.borderColor = 'rgba(108,99,255,0.4)';
+                e.currentTarget.style.boxShadow = '0 0 0 1px rgba(108,99,255,0.15), 0 8px 24px rgba(0,0,0,0.4)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.borderColor = C.border;
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
                 e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              <span className="text-2xl block mb-2">{tile.icon}</span>
-              <span className="text-sm font-semibold block mb-0.5" style={{ color: C.text }}>{tile.label}</span>
-              <span className="text-xs block mb-2" style={{ color: C.textSecondary }}>{tile.desc}</span>
+              <span className="text-3xl block mb-3">{tile.icon}</span>
+              <span className="text-sm font-black font-display block mb-0.5" style={{ color: C.text }}>{tile.label}</span>
+              <span className="text-xs block mb-3" style={{ color: C.textSecondary }}>{tile.desc}</span>
               {count > 0 ? (
                 <span
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{ backgroundColor: 'rgba(91,110,245,0.12)', color: C.primary }}
+                  style={{ background: 'rgba(108,99,255,0.12)', color: '#9B8FFF', border: '1px solid rgba(108,99,255,0.2)' }}
                 >
                   {count} events
                 </span>
               ) : (
                 <span
                   className="text-[10px] px-2 py-0.5 rounded-full"
-                  style={{ backgroundColor: C.elevated, color: C.textMuted, border: `1px solid ${C.border}` }}
+                  style={{ background: 'rgba(255,255,255,0.04)', color: C.textMuted, border: `1px solid ${C.border}` }}
                 >
                   Loading…
                 </span>
@@ -268,15 +276,14 @@ function MarketsView({ onSportSelect, fixtureCounts }) {
         })}
       </div>
 
-      {/* Popular competitions strip */}
       <div className="mt-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Trophy className="w-4 h-4" style={{ color: C.primary }} />
-          <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: C.textSecondary }}>
+        <div className="flex items-center gap-2.5 mb-4">
+          <Trophy className="w-4 h-4" style={{ color: '#FFD700' }} />
+          <h2 className="text-xs font-black uppercase tracking-widest" style={{ color: C.textMuted }}>
             Popular Competitions
           </h2>
         </div>
-        <div className="space-y-1">
+        <div className="space-y-2">
           {[
             { label: 'Premier League', sport: 'football', icon: '⚽' },
             { label: 'Champions League', sport: 'football', icon: '⚽' },
@@ -288,14 +295,23 @@ function MarketsView({ onSportSelect, fixtureCounts }) {
             <button
               key={comp.label}
               onClick={() => onSportSelect(comp.sport)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors"
-              style={{ backgroundColor: 'rgba(22,30,46,0.4)', border: `1px solid ${C.border}` }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = C.elevated}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(22,30,46,0.4)'}
+              className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all duration-200"
+              style={{
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.07)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(108,99,255,0.06)';
+                e.currentTarget.style.borderColor = 'rgba(108,99,255,0.25)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+              }}
             >
               <div className="flex items-center gap-3">
-                <span>{comp.icon}</span>
-                <span className="text-sm font-medium" style={{ color: C.text }}>{comp.label}</span>
+                <span className="text-lg">{comp.icon}</span>
+                <span className="text-sm font-semibold font-display" style={{ color: C.text }}>{comp.label}</span>
               </div>
               <ChevronRight className="w-4 h-4" style={{ color: C.textMuted }} />
             </button>
@@ -317,47 +333,77 @@ function AccountView({ onOpenMyBets }) {
       {/* Profile card */}
       <div
         className="rounded-2xl p-5 mb-6"
-        style={{ backgroundColor: C.elevated, border: `1px solid ${C.border}` }}
+        style={{
+          background: 'rgba(12,17,30,0.75)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.07)',
+        }}
       >
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-4 mb-5">
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold text-white"
-            style={{ background: 'linear-gradient(135deg, #5B6EF5, #7082F8)' }}
+            className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black text-white"
+            style={{ background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)', boxShadow: '0 8px 20px rgba(108,99,255,0.4)' }}
           >
             {user.initials}
           </div>
           <div>
-            <p className="text-lg font-bold" style={{ color: C.text }}>{user.name}</p>
+            <p className="text-xl font-black font-display" style={{ color: C.text }}>{user.name}</p>
             <p className="text-sm" style={{ color: C.textSecondary }}>{user.email}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl p-3" style={{ backgroundColor: 'rgba(0,182,122,0.08)', border: '1px solid rgba(0,182,122,0.15)' }}>
+          <div className="rounded-xl p-3" style={{ background: 'rgba(0,245,160,0.07)', border: '1px solid rgba(0,245,160,0.15)' }}>
             <p className="text-xs mb-1" style={{ color: C.textSecondary }}>Balance</p>
-            <p className="font-mono text-xl font-bold" style={{ color: '#00b67a' }}>£{user.balance.toFixed(2)}</p>
+            <p
+              className="font-mono text-xl font-black"
+              style={{
+                background: 'linear-gradient(135deg, #00F5A0 0%, #00D4FF 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              £{user.balance.toFixed(2)}
+            </p>
           </div>
-          <div className="rounded-xl p-3" style={{ backgroundColor: C.bg, border: `1px solid ${C.border}` }}>
-            <p className="text-xs mb-1" style={{ color: C.textSecondary }}>Active Selections</p>
-            <p className="font-mono text-xl font-bold" style={{ color: C.primary }}>{selections.length}</p>
+          <div className="rounded-xl p-3" style={{ background: 'rgba(108,99,255,0.07)', border: '1px solid rgba(108,99,255,0.15)' }}>
+            <p className="text-xs mb-1" style={{ color: C.textSecondary }}>Selections</p>
+            <p
+              className="font-mono text-xl font-black"
+              style={{
+                background: 'linear-gradient(135deg, #6C63FF 0%, #B06FFF 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              {selections.length}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Quick actions */}
       <div className="space-y-2 mb-6">
         <button
           onClick={onOpenMyBets}
-          className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-colors"
-          style={{ backgroundColor: C.elevated, border: `1px solid ${C.border}` }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = C.primary}
-          onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+          className="w-full flex items-center justify-between px-4 py-4 rounded-xl transition-all duration-200"
+          style={{ background: 'rgba(108,99,255,0.08)', border: '1px solid rgba(108,99,255,0.2)' }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(108,99,255,0.14)';
+            e.currentTarget.style.borderColor = 'rgba(108,99,255,0.4)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'rgba(108,99,255,0.08)';
+            e.currentTarget.style.borderColor = 'rgba(108,99,255,0.2)';
+          }}
         >
           <div className="flex items-center gap-3">
-            <Activity className="w-5 h-5" style={{ color: C.primary }} />
-            <span className="text-sm font-medium" style={{ color: C.text }}>My Bets</span>
+            <Activity className="w-5 h-5" style={{ color: '#9B8FFF' }} />
+            <span className="text-sm font-bold font-display" style={{ color: C.text }}>My Bets</span>
           </div>
-          <ChevronRight className="w-4 h-4" style={{ color: C.textMuted }} />
+          <ChevronRight className="w-4 h-4" style={{ color: '#9B8FFF' }} />
         </button>
 
         {[
@@ -369,13 +415,19 @@ function AccountView({ onOpenMyBets }) {
         ].map(item => (
           <button
             key={item.label}
-            className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-colors"
-            style={{ backgroundColor: C.elevated, border: `1px solid ${C.border}` }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = C.primary}
-            onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+            className="w-full flex items-center justify-between px-4 py-4 rounded-xl transition-all duration-200"
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+            }}
           >
             <div className="flex items-center gap-3">
-              <span className="text-base">{item.icon}</span>
+              <span className="text-lg">{item.icon}</span>
               <span className="text-sm font-medium" style={{ color: C.text }}>{item.label}</span>
             </div>
             <ChevronRight className="w-4 h-4" style={{ color: C.textMuted }} />
@@ -405,59 +457,113 @@ function HorseRacingEmpty() {
   );
 }
 
-// ── Mobile Bottom Nav ─────────────────────────────────────────────────────────
+// ── Mobile Bottom Nav — TikTok style, raised centre Bet Slip button ──────────
 
 function MobileBottomNav({ activeTab, onTabChange, betSlipCount }) {
-  const tabs = [
-    { id: 'home', label: 'Home', Icon: Home },
-    { id: 'live', label: 'Live', Icon: Zap },
-    { id: 'betslip', label: 'Slip', Icon: LayoutGrid },
+  const leftTabs  = [
+    { id: 'home',    label: 'Home',    Icon: Home },
+    { id: 'live',    label: 'Live',    Icon: Zap },
+  ];
+  const rightTabs = [
     { id: 'markets', label: 'Markets', Icon: BarChart3 },
     { id: 'account', label: 'Account', Icon: User },
   ];
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around py-2 px-1"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-end justify-around px-2"
       style={{
-        backgroundColor: 'rgba(8,12,20,0.98)',
-        borderTop: `1px solid ${C.border}`,
-        backdropFilter: 'blur(12px)',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        background: 'rgba(5,8,15,0.97)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderTop: '1px solid rgba(255,255,255,0.07)',
+        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
+        height: '64px',
       }}
     >
-      {tabs.map(tab => {
+      {/* Left tabs */}
+      {leftTabs.map(tab => {
         const { Icon } = tab;
         const isActive = tab.id === activeTab;
         return (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className="flex flex-col items-center gap-0.5 px-3 py-1 relative"
+            className="flex flex-col items-center gap-0.5 py-2 px-4 relative flex-1"
           >
             <div className="relative">
               <Icon
                 className="w-5 h-5"
-                style={{ color: isActive ? C.primary : C.textMuted }}
+                style={{
+                  color: isActive ? '#9B8FFF' : '#3A4560',
+                  filter: isActive ? 'drop-shadow(0 0 6px rgba(108,99,255,0.6))' : 'none',
+                }}
               />
-              {tab.id === 'betslip' && betSlipCount > 0 && (
-                <span
-                  className="absolute -top-1.5 -right-2 min-w-[16px] h-4 rounded-full text-[9px] font-bold flex items-center justify-center px-1"
-                  style={{ backgroundColor: C.liveRed, color: '#fff' }}
-                >
-                  {betSlipCount > 9 ? '9+' : betSlipCount}
-                </span>
-              )}
               {tab.id === 'live' && (
                 <span
-                  className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full"
-                  style={{ backgroundColor: C.liveRed }}
+                  className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full animate-pulse"
+                  style={{ backgroundColor: '#FF3366' }}
                 />
               )}
             </div>
             <span
-              className="text-[10px] font-medium"
-              style={{ color: isActive ? C.primary : C.textMuted }}
+              className="text-[10px] font-semibold"
+              style={{ color: isActive ? '#9B8FFF' : '#3A4560' }}
+            >
+              {tab.label}
+            </span>
+          </button>
+        );
+      })}
+
+      {/* Centre raised Bet Slip button */}
+      <div className="flex flex-col items-center relative" style={{ marginBottom: '10px' }}>
+        <button
+          onClick={() => onTabChange('betslip')}
+          className="w-16 h-16 rounded-full flex items-center justify-center relative"
+          style={{
+            background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)',
+            boxShadow: activeTab === 'betslip'
+              ? '0 0 0 3px rgba(108,99,255,0.3), 0 8px 24px rgba(108,99,255,0.5)'
+              : '0 4px 20px rgba(108,99,255,0.4)',
+            border: '3px solid rgba(5,8,15,0.97)',
+          }}
+        >
+          <LayoutGrid className="w-6 h-6 text-white" />
+          {betSlipCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1 min-w-[20px] h-5 rounded-full text-[10px] font-black flex items-center justify-center px-1.5 text-white"
+              style={{ background: 'linear-gradient(135deg, #FF3366, #FF6B35)' }}
+            >
+              {betSlipCount > 9 ? '9+' : betSlipCount}
+            </span>
+          )}
+        </button>
+        <span className="text-[10px] font-semibold mt-0.5" style={{ color: activeTab === 'betslip' ? '#9B8FFF' : '#3A4560' }}>
+          Slip
+        </span>
+      </div>
+
+      {/* Right tabs */}
+      {rightTabs.map(tab => {
+        const { Icon } = tab;
+        const isActive = tab.id === activeTab;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            className="flex flex-col items-center gap-0.5 py-2 px-4 flex-1"
+          >
+            <Icon
+              className="w-5 h-5"
+              style={{
+                color: isActive ? '#9B8FFF' : '#3A4560',
+                filter: isActive ? 'drop-shadow(0 0 6px rgba(108,99,255,0.6))' : 'none',
+              }}
+            />
+            <span
+              className="text-[10px] font-semibold"
+              style={{ color: isActive ? '#9B8FFF' : '#3A4560' }}
             >
               {tab.label}
             </span>
@@ -614,6 +720,11 @@ function AppContent() {
       {activeView === 'home' && (
         <SportNav activeSport={activeSport} onSportChange={handleSportChange} />
       )}
+
+      {/* ── Live score ticker — mobile, always on top ───────────────────────── */}
+      <div className={`lg:hidden sticky z-30 ${activeView === 'home' ? 'top-[calc(3.5rem+80px)]' : 'top-14'}`}>
+        <LiveTicker allFixtures={allFixtures} />
+      </div>
 
       {/* ── Desktop sidebar ────────────────────────────────────────────────── */}
       <aside
@@ -783,7 +894,7 @@ function AppContent() {
       </aside>
 
       {/* ── Main content ───────────────────────────────────────────────────── */}
-      <main className="pt-14 lg:pl-56 lg:pr-80 pb-16 lg:pb-0">
+      <main className="pt-14 lg:pl-56 lg:pr-80 pb-20 lg:pb-0">
         {/* Extra top padding on mobile when sport nav is visible */}
         {activeView === 'home' && <div className="lg:hidden h-12" />}
 

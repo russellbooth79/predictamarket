@@ -1,65 +1,80 @@
 /**
  * SportNav.jsx — PredictaMarket v4
- * Glassmorphism mobile sport pill navigation.
+ * Instagram Stories-style sport circles. Active = glowing gradient ring.
  */
 
 const SPORTS = [
-  { id: 'football',    label: '⚽ Football' },
-  { id: 'horseracing', label: '🏇 Racing' },
-  { id: 'tennis',      label: '🎾 Tennis' },
-  { id: 'boxing',      label: '🥊 Boxing' },
-  { id: 'nfl',         label: '🏈 NFL' },
-  { id: 'nba',         label: '🏀 NBA' },
+  { id: 'football',    icon: '⚽', label: 'Football' },
+  { id: 'horseracing', icon: '🏇', label: 'Racing' },
+  { id: 'tennis',      icon: '🎾', label: 'Tennis' },
+  { id: 'boxing',      icon: '🥊', label: 'Boxing' },
+  { id: 'nfl',         icon: '🏈', label: 'NFL' },
+  { id: 'nba',         icon: '🏀', label: 'NBA' },
 ];
 
 export default function SportNav({ activeSport, onSportChange }) {
   return (
     <nav
-      className="lg:hidden sticky top-14 z-40 px-4 py-2.5"
+      className="lg:hidden sticky top-14 z-40 px-4 pt-3 pb-3"
       style={{
-        background: 'rgba(5,8,15,0.9)',
+        background: 'rgba(5,8,15,0.92)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}
     >
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5">
+      <div className="flex gap-5 overflow-x-auto scrollbar-hide">
         {SPORTS.map((sport) => {
           const isActive = activeSport === sport.id;
           return (
             <button
               key={sport.id}
               onClick={() => onSportChange(sport.id)}
-              className="shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
-              style={
-                isActive
-                  ? {
-                      background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)',
-                      color: '#ffffff',
-                      boxShadow: '0 4px 12px rgba(108,99,255,0.35)',
-                    }
-                  : {
-                      background: 'rgba(255,255,255,0.05)',
-                      color: '#7B8CAA',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                    }
-              }
-              onMouseEnter={e => {
-                if (!isActive) {
-                  e.currentTarget.style.color = '#F0F6FF';
-                  e.currentTarget.style.background = 'rgba(108,99,255,0.1)';
-                  e.currentTarget.style.borderColor = 'rgba(108,99,255,0.25)';
-                }
-              }}
-              onMouseLeave={e => {
-                if (!isActive) {
-                  e.currentTarget.style.color = '#7B8CAA';
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
-                }
-              }}
+              className="shrink-0 flex flex-col items-center gap-1.5 transition-all duration-200"
             >
-              {sport.label}
+              {/* Circle with gradient ring when active */}
+              <div
+                className="relative"
+                style={{ padding: isActive ? '2px' : '2px' }}
+              >
+                {/* Gradient ring */}
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center"
+                  style={
+                    isActive
+                      ? {
+                          background: 'linear-gradient(135deg, #6C63FF 0%, #FF3366 50%, #9B5DE5 100%)',
+                          padding: '2px',
+                          boxShadow: '0 0 16px rgba(108,99,255,0.5)',
+                        }
+                      : {
+                          background: 'rgba(255,255,255,0.08)',
+                          padding: '2px',
+                          border: '2px solid rgba(255,255,255,0.08)',
+                        }
+                  }
+                >
+                  <div
+                    className="w-full h-full rounded-full flex items-center justify-center text-2xl"
+                    style={{
+                      background: isActive
+                        ? 'rgba(5,8,15,0.95)'
+                        : 'rgba(12,17,30,0.8)',
+                    }}
+                  >
+                    {sport.icon}
+                  </div>
+                </div>
+              </div>
+              {/* Label */}
+              <span
+                className="text-[10px] font-semibold tracking-wide"
+                style={{
+                  color: isActive ? '#B0A5FF' : '#3A4560',
+                }}
+              >
+                {sport.label}
+              </span>
             </button>
           );
         })}

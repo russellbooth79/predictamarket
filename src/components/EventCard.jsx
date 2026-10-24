@@ -4,7 +4,7 @@
  * gradient odds, vibrant live badge.
  */
 
-import { Heart, Clock, ChevronRight, TrendingUp } from 'lucide-react';
+import { Heart, Clock, ChevronRight, TrendingUp, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { useOddsFormat } from '../context/OddsFormatContext.jsx';
@@ -54,6 +54,10 @@ function getBetCount(id) {
   return 1200 + (simpleHash(id) % 7300);
 }
 
+function getLiveBettorCount(id) {
+  return 47 + (simpleHash(id + 'live') % 430);
+}
+
 function formatKickoff(kickoff, isLive, liveMinute) {
   if (isLive) return `${liveMinute}'`;
   return new Date(kickoff).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -84,6 +88,7 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
   const homeForm = generateForm(fixture.homeTeam);
   const awayForm = generateForm(fixture.awayTeam);
   const betCount = getBetCount(fixture.id);
+  const liveBettors = getLiveBettorCount(fixture.id);
 
   function handleOutcomeClick(outcome) {
     addSelection({
@@ -336,11 +341,29 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
         className="flex items-center justify-between px-4 py-2.5"
         style={{ borderTop: `1px solid rgba(255,255,255,0.04)` }}
       >
-        <div className="flex items-center gap-2">
-          <TrendingUp className="w-3 h-3" style={{ color: C.textMuted }} />
-          <span className="text-xs" style={{ color: C.textMuted }}>
-            {betCount.toLocaleString()} bets placed
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <Users className="w-3 h-3" style={{ color: C.textMuted }} />
+            <span className="text-xs" style={{ color: C.textMuted }}>
+              {betCount.toLocaleString()} bets
+            </span>
+          </div>
+          {/* Live bettors pill */}
+          <div
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full"
+            style={{ background: 'rgba(255,51,102,0.08)', border: '1px solid rgba(255,51,102,0.15)' }}
+          >
+            <span className="relative flex h-1.5 w-1.5">
+              <span
+                className="animate-ping absolute inline-flex h-full w-full rounded-full"
+                style={{ backgroundColor: '#FF3366', opacity: 0.6 }}
+              />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ backgroundColor: '#FF3366' }} />
+            </span>
+            <span className="text-[10px] font-bold" style={{ color: '#FF7096' }}>
+              {liveBettors} now
+            </span>
+          </div>
         </div>
         {onViewMatch && (
           <button
