@@ -18,7 +18,7 @@
  * PredictaMarket v3 palette: electric indigo accent, deep navy panels.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, LayoutGrid, CheckCircle, AlertCircle, Loader2, Zap } from 'lucide-react';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
@@ -33,7 +33,7 @@ const HIGH_STAKE_THRESHOLD = 20;
 const SUCCESS_DISPLAY_MS = 2500;
 const MAX_RECOMMENDED_LEGS = 6;
 
-export default function PositionBuilder() {
+export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange }) {
   const {
     selections,
     stake,
@@ -58,8 +58,9 @@ export default function PositionBuilder() {
   const { user, placeBet } = useUser();
   const { format } = useOddsFormat();
 
-  // Mobile bottom sheet toggle
-  const [mobileOpen, setMobileOpen] = useState(false);
+  function setMobileOpen(val) {
+    onMobileOpenChange?.(val);
+  }
 
   const stakeNum = parseFloat(stake) || 0;
 

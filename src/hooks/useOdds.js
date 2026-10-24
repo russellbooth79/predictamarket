@@ -3,10 +3,10 @@
  *
  * Custom hooks for fetching live odds from the PredictaMarket backend.
  * Each hook follows the same pattern:
- *   1. Initialise with mock fixture data so the UI is never empty
- *   2. Attempt to fetch real data from our Express proxy (/api/odds/*)
+ *   1. Initialise with mock fixture data (or empty array) so the UI is never empty
+ *   2. Attempt to fetch real data from the Express proxy (/api/odds/*)
  *   3. On success: replace fixtures with live data, set usingLive flag
- *   4. On failure: silently fall back to mock data -- the UI never breaks
+ *   4. On failure: silently fall back to mock/empty data — the UI never breaks
  *   5. Poll every 60 seconds for updated odds
  */
 
@@ -24,11 +24,8 @@ const POLL_INTERVAL_MS = 60_000;
 const FETCH_TIMEOUT_MS = 8_000;
 
 /**
- * Ensure each outcome has a decimalOdds value.
- * The server returns probability but not always decimalOdds on the
- * top-level outcomes. We derive it from the bookmakers array (best
- * available odds = lowest decimal odds for that outcome = highest
- * probability), or fall back to a simple probability inversion.
+ * Ensure each outcome has a decimalOdds value derived from bookmakers array,
+ * or falling back to a simple probability inversion.
  */
 function ensureDecimalOdds(fixtures) {
   return fixtures.map((fixture) => {
@@ -92,6 +89,10 @@ function useOddsData(endpoint, mockData) {
         setUsingLive(true);
         setLastUpdated(new Date());
         setError(null);
+      } else if (Array.isArray(data) && data.length === 0) {
+        // API returned empty — use mock data but don't set usingLive
+        setUsingLive(false);
+        setError(null);
       }
     } catch (err) {
       setError(err.message);
@@ -110,7 +111,7 @@ function useOddsData(endpoint, mockData) {
   return { fixtures, loading, usingLive, error, lastUpdated, refresh: fetchOdds };
 }
 
-// -- Sport-specific hooks ---------------------------------------------------
+// ── Sport-specific hooks ────────────────────────────────────────────────────
 
 export function useFootballOdds() {
   const allFootball = [...footballFixtures, ...championsLeagueFixtures];
@@ -131,4 +132,12 @@ export function useNflOdds() {
 
 export function useNbaOdds() {
   return useOddsData('/api/odds/nba', nbaFixtures);
+}
+
+/**
+ * Horse racing — no mock fallback. Returns empty array until real API data
+ * arrives. Shows a clean empty state instead of fabricated runners.
+ */
+export function useHorseRacingOdds() {
+  return useOddsData('/api/odds/horse-racing', []);
 }
