@@ -21,14 +21,18 @@
  * State management: sport selection, My Bets panel visibility,
  * and selected fixture for MatchDetailView managed with useState.
  *
+ * Live odds: useFootballOdds hook fetches real data from the backend,
+ * falls back silently to mock data when the API is unavailable.
+ *
  * bet365 colour scheme applied throughout.
  */
 
 import { useState, useMemo } from 'react';
 import { BetSlipProvider } from './context/BetSlipContext.jsx';
 import { UserProvider } from './context/UserContext.jsx';
-import { footballFixtures, horseRacingFixtures, tennisFixtures } from './data/fixtures.js';
+import { horseRacingFixtures, tennisFixtures } from './data/fixtures.js';
 import { matchDetails } from './data/matchDetails.js';
+import { useFootballOdds } from './hooks/useOdds.js';
 import TopBar from './components/TopBar.jsx';
 import SportNav from './components/SportNav.jsx';
 import EventCard from './components/EventCard.jsx';
@@ -68,7 +72,7 @@ const SIDEBAR_CONFIG = {
   },
 };
 
-function getLiveFixtures(sport) {
+function getLiveFixtures(sport, footballFixtures) {
   const fixtureMap = {
     football: footballFixtures,
     horseracing: horseRacingFixtures,
@@ -93,6 +97,14 @@ function App() {
   // MatchDetailView state: when non-null, renders detail view instead of card feed
   const [selectedFixture, setSelectedFixture] = useState(null);
 
+  // Live odds hook — fetches from backend, falls back to mock data
+  const {
+    fixtures: footballFixtures,
+    loading: footballLoading,
+    usingLive: footballUsingLive,
+    lastUpdated: footballLastUpdated,
+  } = useFootballOdds();
+
   function handleDropdownAction(actionId) {
     if (actionId === 'mybets') {
       setMyBetsOpen(true);
@@ -105,7 +117,10 @@ function App() {
     setSelectedFixture(null);
   }
 
-  const liveFixtures = useMemo(() => getLiveFixtures(activeSport), [activeSport]);
+  const liveFixtures = useMemo(
+    () => getLiveFixtures(activeSport, footballFixtures),
+    [activeSport, footballFixtures]
+  );
   const sidebarConfig = SIDEBAR_CONFIG[activeSport];
 
   // Look up detail data for selected fixture (safe fallback to null)
@@ -136,6 +151,30 @@ function App() {
             }}
           >
             <div className="p-4 space-y-6">
+              {/* Data source indicator */}
+              <div className="flex items-center gap-2">
+                {footballUsingLive ? (
+                  <span
+                    className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-full"
+                    style={{ backgroundColor: 'rgba(0,182,122,0.15)', color: '#00b67a' }}
+                  >
+                    LIVE ODDS
+                  </span>
+                ) : (
+                  <span
+                    className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-full"
+                    style={{ backgroundColor: 'rgba(100,116,139,0.15)', color: '#94a3b8' }}
+                  >
+                    DEMO DATA
+                  </span>
+                )}
+                {footballLastUpdated && footballUsingLive && (
+                  <span className="text-[9px] text-gray-500">
+                    {footballLastUpdated.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
+
               {/* Live Now section */}
               {liveFixtures.length > 0 && (
                 <div>
@@ -248,11 +287,32 @@ function App() {
                 <>
                   {/* Section header */}
                   <div className="mb-5">
-                    <h1 className="text-xl font-bold text-white mb-1">
-                      {activeSport === 'football' && 'Football'}
-                      {activeSport === 'horseracing' && 'Horse Racing'}
-                      {activeSport === 'tennis' && 'Tennis'}
-                    </h1>
+                    <div className="flex items-center gap-3 mb-1">
+                      <h1 className="text-xl font-bold text-white">
+                        {activeSport === 'football' && 'Football'}
+                        {activeSport === 'horseracing' && 'Horse Racing'}
+                        {activeSport === 'tennis' && 'Tennis'}
+                      </h1>
+
+                      {/* Mobile data source badge (sidebar not visible on mobile) */}
+                      <div className="lg:hidden">
+                        {activeSport === 'football' && footballUsingLive ? (
+                          <span
+                            className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: 'rgba(0,182,122,0.15)', color: '#00b67a' }}
+                          >
+                            LIVE ODDS
+                          </span>
+                        ) : activeSport === 'football' ? (
+                          <span
+                            className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: 'rgba(100,116,139,0.15)', color: '#94a3b8' }}
+                          >
+                            DEMO DATA
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
                     <p className="text-sm text-gray-400">
                       {activeSport === 'football' && `${footballFixtures.length} events  ·  ${footballFixtures.filter((f) => f.isLive).length} live`}
                       {activeSport === 'horseracing' && `${horseRacingFixtures.length} races across ${[...new Set(horseRacingFixtures.map((f) => f.competition))].length} meetings`}

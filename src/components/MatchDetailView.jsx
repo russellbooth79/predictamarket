@@ -7,13 +7,14 @@
  * Sections (top to bottom):
  * 1. Back navigation + match header (competition, teams, score, live badge)
  * 2. Match Odds (3-col) + Live Bet Feed (side by side on desktop)
- * 3. Odds Probability Graph (full width SVG)
- * 4. Match Stats (horizontal bars -- live/completed only)
- * 5. Match Timeline (chronological events -- live/completed only)
- * 6. More Markets (collapsible sections)
+ * 3. Bookmaker Price Comparison (Oddschecker-style table) — live data only
+ * 4. Odds Probability Graph (full width SVG)
+ * 5. Match Stats (horizontal bars -- live/completed only)
+ * 6. Match Timeline (chronological events -- live/completed only)
+ * 7. More Markets (collapsible sections)
  *
  * Props:
- *   fixture  - from fixtures.js (required)
+ *   fixture  - from fixtures.js or live API (required)
  *   detail   - from matchDetails.js (may be null for fixtures without detail data)
  *   onBack   - callback to return to the event feed
  */
@@ -24,6 +25,7 @@ import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { getProbabilityTextColour, getProbabilityHex } from '../data/oddsUtils.js';
 import { generateBetActivity, initialBetActivity, FEED_POLL_INTERVAL_MS, HIGH_ROLLER_STAKE_THRESHOLD } from '../data/betActivity.js';
 import ProbabilityBar from './ProbabilityBar.jsx';
+import BookmakerOddsPanel from './BookmakerOddsPanel.jsx';
 
 // ─── Helper: format date for the match header ───────────────────────────────
 
@@ -56,11 +58,21 @@ function timeAgo(timestamp) {
   return `${Math.floor(diffMin / 60)}h ago`;
 }
 
+// ─── Bookmaker colour palette for graph secondary lines ─────────────────────
+// Muted, distinguishable tones that won't compete with the main best-price line
+const BOOKMAKER_LINE_COLOURS = [
+  '#6b7280', // gray-500
+  '#7c8594', // lighter gray
+  '#5b6370', // darker gray
+  '#8b95a3', // slate tone
+];
+
 // ─── OddsGraph ──────────────────────────────────────────────────────────────
 // Pure SVG line chart. No external charting library.
-// Three lines: home (yellow #ffb800), draw (gray-400), away (red #e5302f)
+// Main line: best probability (thick, #ffb800)
+// Secondary lines: individual bookmaker probabilities (thin, gray, low opacity)
 
-function OddsGraph({ history, isLive, homeTeam, awayTeam }) {
+function OddsGraph({ history, isLive, homeTeam, awayTeam, bookmakers }) {
   const [hoverIndex, setHoverIndex] = useState(null);
 
   if (!history || history.length < 2) {
@@ -136,10 +148,17 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam }) {
 
   const hoverPoint = hoverIndex !== null ? history[hoverIndex] : null;
 
+  // Render thin bookmaker-specific probability lines on the graph
+  // We overlay horizontal lines at each bookmaker's current home probability
+  // to show spread across books (only when bookmakers data present)
+  const bookmakerLines = bookmakers && bookmakers.length > 0
+    ? bookmakers.slice(0, 4) // Cap at 4 to avoid clutter
+    : [];
+
   return (
     <div className="w-full">
       {/* Legend */}
-      <div className="flex items-center gap-6 mb-3 px-1">
+      <div className="flex items-center gap-6 mb-3 px-1 flex-wrap">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#ffb800' }} />
           <span className="text-xs text-gray-400">{homeTeam}</span>
@@ -152,6 +171,12 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam }) {
           <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#e5302f' }} />
           <span className="text-xs text-gray-400">{awayTeam}</span>
         </div>
+        {bookmakerLines.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-0.5 rounded" style={{ backgroundColor: '#6b7280', opacity: 0.4 }} />
+            <span className="text-xs text-gray-500">Bookmakers</span>
+          </div>
+        )}
       </div>
 
       <svg
@@ -180,7 +205,7 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam }) {
 
         {/* X-axis labels */}
         {xLabels.map((val) => {
-          const svgX = usesMinute ? toSvgX(val) : toSvgX(val);
+          const svgX = toSvgX(val);
           const label = usesMinute ? `${val}'` : `${24 - val}h`;
           return (
             <text
@@ -193,7 +218,22 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam }) {
           );
         })}
 
-        {/* Lines */}
+        {/* Bookmaker-specific horizontal reference lines (home prob only, to show spread) */}
+        {bookmakerLines.map((bm, i) => (
+          <line
+            key={`bm-line-${bm.bookmakerKey}`}
+            x1={PAD_LEFT}
+            y1={toSvgY(bm.homeProb)}
+            x2={W - PAD_RIGHT}
+            y2={toSvgY(bm.homeProb)}
+            stroke={BOOKMAKER_LINE_COLOURS[i % BOOKMAKER_LINE_COLOURS.length]}
+            strokeWidth="1"
+            strokeDasharray="6 4"
+            opacity="0.3"
+          />
+        ))}
+
+        {/* Main best-price lines — these are the dominant visual */}
         <path d={homePath} fill="none" stroke="#ffb800" strokeWidth="2.5" strokeLinejoin="round" />
         <path d={drawPath} fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinejoin="round" opacity="0.7" />
         <path d={awayPath} fill="none" stroke="#e5302f" strokeWidth="2" strokeLinejoin="round" />
@@ -634,6 +674,9 @@ export default function MatchDetailView({ fixture, detail, onBack }) {
   const probabilityHistory = detail?.probabilityHistory || null;
   const markets = detail?.markets || [];
 
+  // Bookmakers array comes from live API data on the fixture itself
+  const bookmakers = fixture.bookmakers || [];
+
   return (
     <div className="animate-fade-in">
       {/* Back navigation */}
@@ -754,9 +797,11 @@ export default function MatchDetailView({ fixture, detail, onBack }) {
                     <div className="w-full">
                       <ProbabilityBar probability={outcome.probability} />
                     </div>
-                    <span className="font-mono text-xs text-gray-500">
-                      {outcome.decimalOdds.toFixed(2)}
-                    </span>
+                    {outcome.decimalOdds != null && (
+                      <span className="font-mono text-xs text-gray-500">
+                        {outcome.decimalOdds.toFixed(2)}
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -769,6 +814,17 @@ export default function MatchDetailView({ fixture, detail, onBack }) {
           <LiveBetFeed fixture={fixture} />
         </div>
       </div>
+
+      {/* Bookmaker Price Comparison — only shown when live API data has bookmaker breakdown */}
+      {bookmakers.length > 0 && (
+        <div className="mb-6">
+          <BookmakerOddsPanel
+            bookmakers={bookmakers}
+            homeTeam={fixture.homeTeam}
+            awayTeam={fixture.awayTeam}
+          />
+        </div>
+      )}
 
       {/* Odds Probability Graph */}
       <div
@@ -783,6 +839,7 @@ export default function MatchDetailView({ fixture, detail, onBack }) {
           isLive={fixture.isLive}
           homeTeam={fixture.homeTeam}
           awayTeam={fixture.awayTeam}
+          bookmakers={bookmakers}
         />
       </div>
 

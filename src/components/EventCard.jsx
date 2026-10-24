@@ -12,7 +12,8 @@
  * a yellow border + tinted background (bet365 brand).
  *
  * "View Match" link at footer navigates to MatchDetailView for football.
- * Source labels removed -- PredictaMarket shows probabilities, not bookmaker origins.
+ * When the fixture has a bookmakers array (live API data), a subtle
+ * green "Live odds" indicator appears in the footer.
  */
 
 import { Heart, Clock, ChevronRight } from 'lucide-react';
@@ -57,6 +58,9 @@ const cardVariants = {
 
 export default function EventCard({ fixture, index = 0, onViewMatch }) {
   const { addSelection, isSelected } = useBetSlip();
+
+  // Live API data includes a bookmakers array; mock data does not
+  const hasLiveOdds = Array.isArray(fixture.bookmakers) && fixture.bookmakers.length > 0;
 
   function handleOutcomeClick(outcome) {
     addSelection({
@@ -212,9 +216,11 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
               </div>
 
               {/* Decimal odds */}
-              <span className="font-mono text-xs text-gray-500">
-                {outcome.decimalOdds.toFixed(2)}
-              </span>
+              {outcome.decimalOdds != null && (
+                <span className="font-mono text-xs text-gray-500">
+                  {outcome.decimalOdds.toFixed(2)}
+                </span>
+              )}
             </button>
           );
         })}
@@ -225,28 +231,44 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
         className="flex items-center justify-between px-4 py-2"
         style={{ borderTop: '1px solid rgba(45,63,82,0.5)' }}
       >
-        {/* View Match -- navigates to MatchDetailView */}
-        {onViewMatch ? (
-          <button
-            onClick={() => onViewMatch(fixture)}
-            className="flex items-center gap-1 text-xs font-medium transition-colors"
-            style={{ color: '#ffb800' }}
-            onMouseEnter={(e) => e.currentTarget.style.color = '#ffc933'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#ffb800'}
-          >
-            View Match
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        ) : (
-          <button
-            className="text-xs transition-colors"
-            style={{ color: '#ffb800' }}
-            onMouseEnter={(e) => e.currentTarget.style.color = '#ffc933'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#ffb800'}
-          >
-            More markets
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* View Match -- navigates to MatchDetailView */}
+          {onViewMatch ? (
+            <button
+              onClick={() => onViewMatch(fixture)}
+              className="flex items-center gap-1 text-xs font-medium transition-colors"
+              style={{ color: '#ffb800' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#ffc933'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#ffb800'}
+            >
+              View Match
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <button
+              className="text-xs transition-colors"
+              style={{ color: '#ffb800' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#ffc933'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#ffb800'}
+            >
+              More markets
+            </button>
+          )}
+
+          {/* Live odds indicator — subtle signal that this card uses real API data */}
+          {hasLiveOdds && (
+            <div className="flex items-center gap-1.5">
+              <span
+                className="inline-block w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: '#00b67a' }}
+              />
+              <span className="text-[10px] text-gray-500">
+                Live odds
+              </span>
+            </div>
+          )}
+        </div>
+
         <button className="p-1.5 text-gray-500 hover:text-red-400 transition-colors">
           <Heart className="w-4 h-4" />
         </button>
