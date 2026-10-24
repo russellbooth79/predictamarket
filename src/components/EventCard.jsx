@@ -1,29 +1,40 @@
 /**
  * EventCard.jsx — PredictaMarket v4
- * Glassmorphism football match card. Glowing selection states,
- * gradient odds, vibrant live badge.
+ * Glassmorphism football match card.
+ * Mobile: team-colour-bleed hero background + swipe-right-to-add gesture on odds buttons.
+ * Desktop: hover states, no drag overhead.
  */
 
-import { Heart, Clock, ChevronRight, TrendingUp, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Heart, Clock, ChevronRight, Users } from 'lucide-react';
+import { motion, useMotionValue, useTransform, useAnimation } from 'framer-motion';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { useOddsFormat } from '../context/OddsFormatContext.jsx';
 import { formatOdds } from '../utils/oddsFormatter.js';
+import { useIsMobile } from '../hooks/useIsMobile.js';
 import ProbabilityBar from './ProbabilityBar.jsx';
 
 const C = {
   card: 'rgba(12,17,30,0.75)',
-  elevated: 'rgba(255,255,255,0.04)',
   border: 'rgba(255,255,255,0.07)',
   borderHover: 'rgba(255,255,255,0.14)',
   primary: '#6C63FF',
-  primaryGrad: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)',
   liveRed: '#FF3366',
   green: '#00F5A0',
   text: '#F0F6FF',
   textSecondary: '#7B8CAA',
   textMuted: '#3A4560',
 };
+
+// Seven accent colours — one selected per fixture via simpleHash
+const TEAM_ACCENTS = [
+  '#6C63FF', // indigo
+  '#FF3366', // red
+  '#00F5A0', // green
+  '#00D4FF', // cyan
+  '#FF9500', // amber
+  '#9B5DE5', // violet
+  '#FF6B35', // orange
+];
 
 function simpleHash(str) {
   let h = 5381;
@@ -81,14 +92,162 @@ const cardVariants = {
   }),
 };
 
+// ── Swipeable outcome button (mobile) ────────────────────────────────────────
+
+const SWIPE_THRESHOLD = 40;
+
+function SwipeableOutcomeButton({ outcome, selected, formattedOdds, onSelect }) {
+  const controls = useAnimation();
+  const x = useMotionValue(0);
+  const confirmOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);
+  const confirmScale = useTransform(x, [0, SWIPE_THRESHOLD], [0.8, 1]);
+
+  async function handleDragEnd(_, info) {
+    if (info.offset.x > SWIPE_THRESHOLD && !selected) {
+      await controls.start({ x: 10, transition: { duration: 0.08 } });
+      onSelect();
+    }
+    controls.start({ x: 0, transition: { type: 'spring', stiffness: 500, damping: 35 } });
+  }
+
+  const buttonStyle = selected
+    ? {
+        background: 'rgba(108,99,255,0.15)',
+        border: '1px solid rgba(108,99,255,0.6)',
+        boxShadow: '0 0 20px rgba(108,99,255,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
+      }
+    : {
+        background: 'rgba(255,255,255,0.03)',
+        border: `1px solid ${C.border}`,
+      };
+
+  return (
+    <div className="relative overflow-hidden rounded-xl">
+      {/* Green confirm reveal — appears as user swipes right */}
+      <motion.div
+        className="absolute inset-0 rounded-xl flex items-center justify-center pointer-events-none"
+        style={{
+          opacity: confirmOpacity,
+          scale: confirmScale,
+          background: 'rgba(0,245,160,0.1)',
+          border: '1px solid rgba(0,245,160,0.3)',
+        }}
+      >
+        <span className="text-sm font-black" style={{ color: '#00F5A0' }}>+ Add</span>
+      </motion.div>
+
+      <motion.button
+        drag="x"
+        dragConstraints={{ left: 0, right: 70 }}
+        dragElastic={0.05}
+        animate={controls}
+        style={{ x, ...buttonStyle }}
+        onDragEnd={handleDragEnd}
+        onClick={() => !selected && onSelect()}
+        className="relative flex flex-col items-center gap-1.5 p-3 w-full rounded-xl touch-pan-y"
+      >
+        <span className="text-[10px] uppercase tracking-widest font-medium" style={{ color: C.textSecondary }}>
+          {outcome.label}
+        </span>
+        <span
+          className="font-mono text-2xl font-black"
+          style={selected
+            ? {
+                background: 'linear-gradient(135deg, #6C63FF 0%, #B06FFF 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }
+            : { color: '#E8F0FF' }
+          }
+        >
+          {formattedOdds}
+        </span>
+        <div className="w-full">
+          <ProbabilityBar probability={outcome.probability} selected={selected} />
+        </div>
+      </motion.button>
+    </div>
+  );
+}
+
+// ── Desktop outcome button ────────────────────────────────────────────────────
+
+function DesktopOutcomeButton({ outcome, selected, formattedOdds, onSelect }) {
+  const buttonStyle = selected
+    ? {
+        background: 'rgba(108,99,255,0.15)',
+        border: '1px solid rgba(108,99,255,0.6)',
+        boxShadow: '0 0 20px rgba(108,99,255,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
+      }
+    : {
+        background: 'rgba(255,255,255,0.03)',
+        border: `1px solid ${C.border}`,
+      };
+
+  return (
+    <button
+      onClick={() => onSelect()}
+      className="relative flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all duration-200 cursor-pointer overflow-hidden"
+      style={buttonStyle}
+      onMouseEnter={e => {
+        if (!selected) {
+          e.currentTarget.style.background = 'rgba(108,99,255,0.06)';
+          e.currentTarget.style.borderColor = 'rgba(108,99,255,0.35)';
+          e.currentTarget.style.transform = 'scale(1.02)';
+        }
+      }}
+      onMouseLeave={e => {
+        if (!selected) {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+          e.currentTarget.style.borderColor = C.border;
+          e.currentTarget.style.transform = 'scale(1)';
+        }
+      }}
+    >
+      <span className="text-[10px] uppercase tracking-widest font-medium" style={{ color: C.textSecondary }}>
+        {outcome.label}
+      </span>
+      <span
+        className="font-mono text-2xl font-black"
+        style={selected
+          ? {
+              background: 'linear-gradient(135deg, #6C63FF 0%, #B06FFF 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }
+          : { color: '#E8F0FF' }
+        }
+      >
+        {formattedOdds}
+      </span>
+      <div className="w-full">
+        <ProbabilityBar probability={outcome.probability} selected={selected} />
+      </div>
+    </button>
+  );
+}
+
+// ── Main card ─────────────────────────────────────────────────────────────────
+
 export default function EventCard({ fixture, index = 0, onViewMatch }) {
   const { addSelection, isSelected } = useBetSlip();
   const { format } = useOddsFormat();
+  const isMobile = useIsMobile();
 
   const homeForm = generateForm(fixture.homeTeam);
   const awayForm = generateForm(fixture.awayTeam);
   const betCount = getBetCount(fixture.id);
   const liveBettors = getLiveBettorCount(fixture.id);
+
+  // Team colour bleed — deterministic per fixture
+  const accent = TEAM_ACCENTS[simpleHash(fixture.id) % TEAM_ACCENTS.length];
+  const heroBackground = isMobile
+    ? `radial-gradient(ellipse 70% 50% at 10% 0%, ${accent}1A 0%, transparent 60%),
+       radial-gradient(ellipse 70% 50% at 90% 0%, ${accent}14 0%, transparent 60%),
+       rgba(12,17,30,0.82)`
+    : C.card;
 
   function handleOutcomeClick(outcome) {
     addSelection({
@@ -112,7 +271,7 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
       animate="visible"
       className="rounded-2xl overflow-hidden"
       style={{
-        background: C.card,
+        background: heroBackground,
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         border: anySelected
@@ -124,21 +283,21 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
         transition: 'all 0.25s ease',
       }}
       onMouseEnter={e => {
-        if (!anySelected) {
+        if (!anySelected && !isMobile) {
           e.currentTarget.style.borderColor = C.borderHover;
           e.currentTarget.style.boxShadow = '0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)';
           e.currentTarget.style.transform = 'translateY(-1px)';
         }
       }}
       onMouseLeave={e => {
-        if (!anySelected) {
+        if (!anySelected && !isMobile) {
           e.currentTarget.style.borderColor = C.border;
           e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.3)';
           e.currentTarget.style.transform = 'translateY(0)';
         }
       }}
     >
-      {/* Live progress bar — full-width accent when live */}
+      {/* Live accent bar */}
       {fixture.isLive && (
         <div
           className="h-0.5 w-full"
@@ -149,7 +308,7 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-2.5"
-        style={{ borderBottom: `1px solid rgba(255,255,255,0.05)` }}
+        style={{ borderBottom: ' 1px solid rgba(255,255,255,0.05)' }}
       >
         <div className="flex items-center gap-2">
           <span
@@ -181,15 +340,9 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
                   className="animate-ping absolute inline-flex h-full w-full rounded-full"
                   style={{ backgroundColor: C.liveRed, opacity: 0.75 }}
                 />
-                <span
-                  className="relative inline-flex rounded-full h-1.5 w-1.5"
-                  style={{ backgroundColor: C.liveRed }}
-                />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ backgroundColor: C.liveRed }} />
               </span>
-              <span
-                className="text-xs font-bold tracking-wider"
-                style={{ color: C.liveRed }}
-              >
+              <span className="text-xs font-bold tracking-wider" style={{ color: C.liveRed }}>
                 {formatKickoff(fixture.kickoff, true, fixture.liveMinute)}
               </span>
             </div>
@@ -209,10 +362,7 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <span
-              className="text-lg font-bold block leading-tight font-display"
-              style={{ color: C.text }}
-            >
+            <span className="text-lg font-bold block leading-tight font-display" style={{ color: C.text }}>
               {fixture.homeTeam}
             </span>
             <div className="flex items-center gap-1 mt-1.5">
@@ -256,10 +406,7 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
           )}
 
           <div className="flex-1 text-right">
-            <span
-              className="text-lg font-bold block leading-tight font-display"
-              style={{ color: C.text }}
-            >
+            <span className="text-lg font-bold block leading-tight font-display" style={{ color: C.text }}>
               {fixture.awayTeam}
             </span>
             <div className="flex items-center gap-1 mt-1.5 justify-end">
@@ -269,69 +416,36 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
         </div>
       </div>
 
+      {/* Swipe hint — mobile only, shown once per session implicitly via low opacity */}
+      {isMobile && (
+        <div className="px-4 pb-1">
+          <p className="text-[9px] text-center" style={{ color: C.textMuted }}>
+            Swipe right on odds to add · tap to select
+          </p>
+        </div>
+      )}
+
       {/* Outcome buttons */}
       <div className="grid grid-cols-3 gap-2 px-4 pb-3">
         {fixture.outcomes.map((outcome) => {
           const selected = isSelected(fixture.id, outcome.id);
-          return (
-            <button
+          const formattedOdds = formatOdds(outcome.probability, format);
+          return isMobile ? (
+            <SwipeableOutcomeButton
               key={outcome.id}
-              onClick={() => handleOutcomeClick(outcome)}
-              className="relative flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all duration-200 cursor-pointer overflow-hidden"
-              style={
-                selected
-                  ? {
-                      background: 'rgba(108,99,255,0.15)',
-                      border: '1px solid rgba(108,99,255,0.6)',
-                      boxShadow: '0 0 20px rgba(108,99,255,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
-                    }
-                  : {
-                      background: 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${C.border}`,
-                    }
-              }
-              onMouseEnter={e => {
-                if (!selected) {
-                  e.currentTarget.style.background = 'rgba(108,99,255,0.06)';
-                  e.currentTarget.style.borderColor = 'rgba(108,99,255,0.35)';
-                  e.currentTarget.style.transform = 'scale(1.02)';
-                }
-              }}
-              onMouseLeave={e => {
-                if (!selected) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                  e.currentTarget.style.borderColor = C.border;
-                  e.currentTarget.style.transform = 'scale(1)';
-                }
-              }}
-            >
-              <span
-                className="text-[10px] uppercase tracking-widest font-medium"
-                style={{ color: C.textSecondary }}
-              >
-                {outcome.label}
-              </span>
-
-              <span
-                className="font-mono text-2xl font-black"
-                style={
-                  selected
-                    ? {
-                        background: 'linear-gradient(135deg, #6C63FF 0%, #B06FFF 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
-                      }
-                    : { color: '#E8F0FF' }
-                }
-              >
-                {formatOdds(outcome.probability, format)}
-              </span>
-
-              <div className="w-full">
-                <ProbabilityBar probability={outcome.probability} selected={selected} />
-              </div>
-            </button>
+              outcome={outcome}
+              selected={selected}
+              formattedOdds={formattedOdds}
+              onSelect={() => handleOutcomeClick(outcome)}
+            />
+          ) : (
+            <DesktopOutcomeButton
+              key={outcome.id}
+              outcome={outcome}
+              selected={selected}
+              formattedOdds={formattedOdds}
+              onSelect={() => handleOutcomeClick(outcome)}
+            />
           );
         })}
       </div>
@@ -339,7 +453,7 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
       {/* Footer */}
       <div
         className="flex items-center justify-between px-4 py-2.5"
-        style={{ borderTop: `1px solid rgba(255,255,255,0.04)` }}
+        style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
       >
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
@@ -348,7 +462,6 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
               {betCount.toLocaleString()} bets
             </span>
           </div>
-          {/* Live bettors pill */}
           <div
             className="flex items-center gap-1 px-2 py-0.5 rounded-full"
             style={{ background: 'rgba(255,51,102,0.08)', border: '1px solid rgba(255,51,102,0.15)' }}
@@ -370,8 +483,8 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
             onClick={() => onViewMatch(fixture)}
             className="flex items-center gap-1 text-xs font-semibold transition-all"
             style={{ color: '#9B8FFF' }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#B0A5FF'; e.currentTarget.style.gap = '6px'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#9B8FFF'; e.currentTarget.style.gap = '4px'; }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#B0A5FF'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#9B8FFF'; }}
           >
             Match Centre
             <ChevronRight className="w-3.5 h-3.5" />
