@@ -1,9 +1,7 @@
 import express from 'express';
-import { createRequire } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
@@ -26,9 +24,9 @@ function setCache(key, data) {
 }
 
 // ── Odds API fetch helper ─────────────────────────────────────────────────────
-async function oddsApiFetch(path, params = {}) {
+async function oddsApiFetch(apiPath, params = {}) {
   if (!ODDS_API_KEY) throw new Error('ODDS_API_KEY not configured');
-  const url = new URL(`${ODDS_API_BASE}${path}`);
+  const url = new URL(`${ODDS_API_BASE}${apiPath}`);
   url.searchParams.set('apiKey', ODDS_API_KEY);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   const res = await fetch(url.toString(), {
@@ -45,13 +43,11 @@ function normaliseProbabilities(rawProbs) {
 }
 
 function transformEvent(ev) {
-  // ev.bookmakers is array of { key, title, markets: [{ key, outcomes: [{name, price}] }] }
   const h2hBooks = ev.bookmakers
     .map(b => {
       const market = b.markets.find(m => m.key === 'h2h');
       if (!market) return null;
       const outcomes = market.outcomes;
-      // Typical order: home, away, draw — sort consistently
       const home = outcomes.find(o => o.name === ev.home_team);
       const away = outcomes.find(o => o.name === ev.away_team);
       const draw = outcomes.find(o => o.name === 'Draw');
@@ -60,12 +56,12 @@ function transformEvent(ev) {
         (1 / home.price) * 100,
         draw ? (1 / draw.price) * 100 : 0,
         (1 / away.price) * 100,
-      ];
-      const norm = normaliseProbabilities(rawProbs.filter(p => p > 0));
+      ].filter(p => p > 0);
+      const norm = normaliseProbabilities(rawProbs);
       return {
         bookmaker: b.title,
         bookmakerKey: b.key,
-        homeProb: draw ? norm[0] : norm[0],
+        homeProb: norm[0],
         drawProb: draw ? norm[1] : null,
         awayProb: draw ? norm[2] : norm[1],
         homeOdds: home.price,
@@ -77,16 +73,15 @@ function transformEvent(ev) {
 
   if (!h2hBooks.length) return null;
 
-  // Best available probability per outcome (highest prob = best price)
   const bestHome = Math.max(...h2hBooks.map(b => b.homeProb));
-  const bestDraw = Math.max(...h2hBooks.filter(b => b.drawProb != null).map(b => b.drawProb));
+  const bestDraw = h2hBooks.some(b => b.drawProb != null)
+    ? Math.max(...h2hBooks.filter(b => b.drawProb != null).map(b => b.drawProb))
+    : null;
   const bestAway = Math.max(...h2hBooks.map(b => b.awayProb));
 
   const outcomes = [
     { id: 'home', label: `${ev.home_team.split(' ').slice(-1)[0]} Win`, probability: bestHome, team: ev.home_team },
-    ...(h2hBooks.some(b => b.drawProb != null)
-      ? [{ id: 'draw', label: 'Draw', probability: bestDraw }]
-      : []),
+    ...(bestDraw != null ? [{ id: 'draw', label: 'Draw', probability: bestDraw }] : []),
     { id: 'away', label: `${ev.away_team.split(' ').slice(-1)[0]} Win`, probability: bestAway, team: ev.away_team },
   ];
 
@@ -102,15 +97,14 @@ function transformEvent(ev) {
     liveMinute: null,
     liveScore: null,
     outcomes,
-    bookmakers: h2hBooks, // full per-book breakdown for the comparison chart
+    bookmakers: h2hBooks,
   };
 }
 
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.get('/api/odds/football', async (req, res) => {
   try {
-    const cacheKey = 'football_epl';
-    const cached = getCached(cacheKey);
+    const cached = getCached('football_epl');
     if (cached) return res.json(cached);
 
     const data = await oddsApiFetch('/sports/soccer_epl/odds', {
@@ -120,12 +114,8 @@ app.get('/api/odds/football', async (req, res) => {
       dateFormat: 'iso',
     });
 
-    const events = data
-      .map(transformEvent)
-      .filter(Boolean)
-      .slice(0, 12); // cap at 12 events
-
-    setCache(cacheKey, events);
+    const events = data.map(transformEvent).filter(Boolean).slice(0, 12);
+    setCache('football_epl', events);
     res.json(events);
   } catch (err) {
     console.error('Football odds error:', err.message);
@@ -135,16 +125,15 @@ app.get('/api/odds/football', async (req, res) => {
 
 app.get('/api/odds/tennis', async (req, res) => {
   try {
-    const cacheKey = 'tennis';
-    const cached = getCached(cacheKey);
+    const cached = getCached('tennis');
     if (cached) return res.json(cached);
 
-    const data = await oddsApiFetch('/sports/tennis_atp_french_open/odds', {
+    const data = await oddsApiFetch('/sports/tennis_atp_us_open/odds', {
       regions: 'uk',
       markets: 'h2h',
       oddsFormat: 'decimal',
       dateFormat: 'iso',
-    }).catch(() => []); // fallback if no live tournament
+    }).catch(() => []);
 
     const events = data
       .map(ev => {
@@ -153,8 +142,7 @@ app.get('/api/odds/tennis', async (req, res) => {
             const market = b.markets.find(m => m.key === 'h2h');
             if (!market || market.outcomes.length < 2) return null;
             const [p1, p2] = market.outcomes;
-            const raw = [1/p1.price * 100, 1/p2.price * 100];
-            const norm = normaliseProbabilities(raw);
+            const norm = normaliseProbabilities([1/p1.price * 100, 1/p2.price * 100]);
             return { bookmaker: b.title, bookmakerKey: b.key, p1Prob: norm[0], p2Prob: norm[1] };
           })
           .filter(Boolean);
@@ -177,14 +165,14 @@ app.get('/api/odds/tennis', async (req, res) => {
       .filter(Boolean)
       .slice(0, 6);
 
-    setCache(cacheKey, events);
+    setCache('tennis', events);
     res.json(events);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
     hasApiKey: !!ODDS_API_KEY,
@@ -194,12 +182,13 @@ app.get('/api/health', (req, res) => {
 });
 
 // ── Serve React build ─────────────────────────────────────────────────────────
+// Express v5: wildcard routes require explicit pattern, not bare '*'
 app.use(express.static(path.join(__dirname, 'dist')));
-app.get('*', (req, res) => {
+app.get('/{*path}', (_req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(PORT, () => {
   console.log(`PredictaMarket server running on port ${PORT}`);
-  console.log(`Odds API key: ${ODDS_API_KEY ? 'configured' : 'MISSING — using mock data'}`);
+  console.log(`Odds API key: ${ODDS_API_KEY ? 'configured' : 'MISSING — serving mock data via frontend'}`);
 });
