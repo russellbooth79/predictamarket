@@ -1,17 +1,18 @@
 /**
  * SwipeFeed.jsx — PredictaMarket v4
  * TikTok-style full-height vertical snap feed for mobile.
- * Uses CSS scroll-snap for GPU-accelerated native performance.
- * Each card occupies 88dvh (leaving 12dvh for the persistent bottom nav).
- * Desktop falls through to a plain vertical list — pass children directly.
+ * Uses position:fixed so card height is exactly the visible viewport minus
+ * the top chrome (TopBar + SportNav) and the bottom nav — no matter how the
+ * parent container is laid out.
+ * Desktop falls through to a plain vertical list.
  */
 
 import { useRef } from 'react';
 import { useIsMobile } from '../hooks/useIsMobile.js';
 
-const CARD_HEIGHT = 'calc(100dvh - 64px)'; // 64px = bottom nav height
+const BOTTOM_NAV_H = 64; // px — must match MobileBottomNav height in App.jsx
 
-export default function SwipeFeed({ children }) {
+export default function SwipeFeed({ children, topOffset = 136 }) {
   const isMobile = useIsMobile();
   const containerRef = useRef(null);
 
@@ -26,13 +27,17 @@ export default function SwipeFeed({ children }) {
     <div
       ref={containerRef}
       style={{
-        height: CARD_HEIGHT,
+        position: 'fixed',
+        top: topOffset,
+        bottom: BOTTOM_NAV_H,
+        left: 0,
+        right: 0,
         overflowY: 'scroll',
         scrollSnapType: 'y mandatory',
         WebkitOverflowScrolling: 'touch',
-        // Hide scrollbar but keep scrollability
         msOverflowStyle: 'none',
         scrollbarWidth: 'none',
+        zIndex: 5,
       }}
       className="scrollbar-hide"
     >
@@ -40,10 +45,9 @@ export default function SwipeFeed({ children }) {
         <div
           key={i}
           style={{
-            height: CARD_HEIGHT,
+            height: '100%',
             scrollSnapAlign: 'start',
             scrollSnapStop: 'always',
-            // Slight gap between cards to hint at next card
             paddingBottom: i < items.length - 1 ? '12px' : 0,
           }}
         >
@@ -54,7 +58,7 @@ export default function SwipeFeed({ children }) {
       {/* End-of-feed sentinel */}
       {items.length > 0 && (
         <div
-          style={{ height: CARD_HEIGHT, scrollSnapAlign: 'start' }}
+          style={{ height: '100%', scrollSnapAlign: 'start' }}
           className="flex flex-col items-center justify-center gap-4"
         >
           <div

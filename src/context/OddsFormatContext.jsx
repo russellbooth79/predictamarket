@@ -10,7 +10,7 @@
 
 import { createContext, useContext, useState, useCallback } from 'react';
 
-const STORAGE_KEY = 'predictamarket_odds_format';
+const STORAGE_KEY = 'punt_odds_format';
 const VALID_FORMATS = ['probability', 'decimal', 'fractional'];
 const DEFAULT_FORMAT = 'probability';
 

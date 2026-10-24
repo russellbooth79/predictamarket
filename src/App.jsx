@@ -961,8 +961,8 @@ function AppContent() {
                 />
               ) : (
                 <>
-                  {/* Discovery surface — football tab only */}
-                  {activeSport === 'football' && (
+                  {/* Discovery surface — football tab only, desktop only (mobile uses SwipeFeed hero) */}
+                  {activeSport === 'football' && !isMobile && (
                     <DiscoverySurface
                       liveFixtures={footballFixturesLive.filter(f => f.isLive)}
                       onViewMatch={f => setSelectedFixture(f)}

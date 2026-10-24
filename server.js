@@ -36,7 +36,7 @@ async function oddsApiFetch(apiPath, params = {}) {
   url.searchParams.set('apiKey', ODDS_API_KEY);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   const res = await fetch(url.toString(), {
-    headers: { 'User-Agent': 'PredictaMarket/1.0' },
+    headers: { 'User-Agent': 'PUNT/1.0' },
     signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) throw new Error(`Odds API ${res.status}: ${await res.text()}`);
@@ -285,7 +285,7 @@ app.post('/api/ai-bet', async (req, res) => {
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 512,
-      system: `You are a sports betting assistant for PredictaMarket. Return ONLY a JSON object with these fields:
+      system: `You are a sports betting assistant for PUNT. Return ONLY a JSON object with these fields:
 {
   "fixture_id": "ai-<short-alphanumeric-id>",
   "eventName": "Home Team vs Away Team",
@@ -414,7 +414,7 @@ app.get('/api/odds/tennis', async (req, res) => {
       const sportsUrl = new URL(`${ODDS_API_BASE}/sports`);
       sportsUrl.searchParams.set('apiKey', ODDS_API_KEY);
       const sportsRes = await fetch(sportsUrl.toString(), {
-        headers: { 'User-Agent': 'PredictaMarket/1.0' },
+        headers: { 'User-Agent': 'PUNT/1.0' },
         signal: AbortSignal.timeout(5000),
       });
       if (sportsRes.ok) {
@@ -529,7 +529,7 @@ app.get('/api/sports', async (req, res) => {
     const url = new URL(`${ODDS_API_BASE}/sports`);
     url.searchParams.set('apiKey', ODDS_API_KEY);
     const response = await fetch(url.toString(), {
-      headers: { 'User-Agent': 'PredictaMarket/1.0' },
+      headers: { 'User-Agent': 'PUNT/1.0' },
     });
 
     if (!response.ok) throw new Error(`Sports API ${response.status}`);
@@ -569,6 +569,6 @@ app.get('/{*path}', (_req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`PredictaMarket server running on port ${PORT}`);
+  console.log(`PUNT server running on port ${PORT}`);
   console.log(`Odds API key: ${ODDS_API_KEY ? 'configured' : 'MISSING — serving empty data for live sports'}`);
 });

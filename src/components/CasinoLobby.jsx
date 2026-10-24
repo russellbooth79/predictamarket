@@ -200,7 +200,7 @@ function MoodGate({ onSelect }) {
         className="text-center mb-8"
       >
         <p className="text-[11px] font-bold uppercase tracking-[0.3em] mb-3" style={{ color: '#6C63FF' }}>
-          Casino
+          PUNT Casino
         </p>
         <h2 className="text-3xl font-black font-display mb-2" style={{ color: '#F0F6FF' }}>
           What's the vibe tonight?

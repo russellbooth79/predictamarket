@@ -69,7 +69,7 @@ export default function TopBar({ activeSport, onSportChange, onDropdownAction })
       {/* Logo */}
       <div className="flex items-center shrink-0">
         <span
-          className="text-xl font-black tracking-tight font-display"
+          className="text-2xl font-black tracking-tight font-display"
           style={{
             background: 'linear-gradient(135deg, #6C63FF 0%, #B06FFF 100%)',
             WebkitBackgroundClip: 'text',
@@ -77,10 +77,7 @@ export default function TopBar({ activeSport, onSportChange, onDropdownAction })
             backgroundClip: 'text',
           }}
         >
-          Predicta
-        </span>
-        <span className="text-xl font-black tracking-tight font-display" style={{ color: '#F0F6FF' }}>
-          Market
+          PUNT
         </span>
       </div>
 
