@@ -6,6 +6,9 @@
  * before final confirmation.
  *
  * PredictaMarket v3 palette: indigo confirm button, deep navy card.
+ *
+ * z-index changed from z-[100] to z-[90] to sit below the auth overlays
+ * (LandingScreen z-[100], SignupFlow/LoginFlow z-[110], PlayerProfiling z-[120]).
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,7 +41,7 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[90] flex items-center justify-center p-4"
           variants={overlayVariants}
           initial="hidden"
           animate="visible"

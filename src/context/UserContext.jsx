@@ -10,17 +10,31 @@
  * In production, balance would be a separate real-time subscription
  * (WebSocket or polling) and bet placement would go through an
  * idempotent POST with server-side balance validation.
+ *
+ * Changes from v1:
+ *   - Accepts `initialUser` prop — passed from AuthContext via AuthGate
+ *     so the authenticated user profile seeds this context.
+ *   - SYNC_USER reducer case — allows AuthContext to push preference
+ *     updates (e.g. after profiling) into UserContext without unmounting.
+ *   - Falls back to testUser if no initialUser is provided (dev convenience).
+ *   - registerUserSync registration moved to useEffect so AuthContext
+ *     can push user changes to this context over time.
  */
 
-import { createContext, useContext, useReducer, useCallback } from 'react';
+import { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { testUser } from '../data/user.js';
+import { useAuth } from './AuthContext.jsx';
 
 const UserContext = createContext(null);
 
-const initialState = {
-  user: testUser,
-  bets: [],
-};
+function buildInitialState(initialUser) {
+  return {
+    // initialUser takes precedence (authenticated flow);
+    // testUser is the fallback for local dev without going through signup.
+    user: initialUser ?? testUser,
+    bets: [],
+  };
+}
 
 function userReducer(state, action) {
   switch (action.type) {
@@ -47,13 +61,38 @@ function userReducer(state, action) {
       };
     }
 
+    // SYNC_USER — called by AuthContext's registerUserSync callback when
+    // the auth user changes (preferences saved, profile updated, logout).
+    // Replaces the user wholesale; callers should pass null on logout so
+    // consumers can handle the unauthenticated state.
+    case 'SYNC_USER': {
+      return {
+        ...state,
+        user: action.payload.user ?? testUser,
+        // Reset bets on logout (user change to null)
+        bets: action.payload.user ? state.bets : [],
+      };
+    }
+
     default:
       return state;
   }
 }
 
-export function UserProvider({ children }) {
-  const [state, dispatch] = useReducer(userReducer, initialState);
+export function UserProvider({ children, initialUser }) {
+  const [state, dispatch] = useReducer(userReducer, buildInitialState(initialUser));
+
+  // Register a sync function with AuthContext so it can push user updates here.
+  // This avoids prop drilling while keeping the contexts decoupled.
+  const { registerUserSync } = useAuth();
+
+  useEffect(() => {
+    registerUserSync((user) => {
+      dispatch({ type: 'SYNC_USER', payload: { user } });
+    });
+    // Clean up on unmount — unregister by passing null
+    return () => registerUserSync(null);
+  }, [registerUserSync]);
 
   /**
    * Simulate bet placement with a mock API delay.

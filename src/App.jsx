@@ -15,12 +15,22 @@
  *
  * Desktop sidebar shows competition tree for active sport.
  * Sport nav pills (mobile) only visible when activeView === 'home'.
+ *
+ * Auth changes (v4.1):
+ *   - AuthProvider wraps everything
+ *   - AuthGate replaces the direct <AppContent /> render — shows LandingScreen
+ *     when unauthenticated and the app when authenticated
+ *   - UserProvider moved inside AuthGate so it always has an authenticated user
+ *   - handleDropdownAction wired to authContext.logout() for 'signout'
  */
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { OddsFormatProvider } from './context/OddsFormatContext.jsx';
 import { BetSlipProvider, useBetSlip } from './context/BetSlipContext.jsx';
 import { UserProvider, useUser } from './context/UserContext.jsx';
+import { AuthProvider, useAuth } from './context/AuthContext.jsx';
+import { GamificationProvider } from './context/GamificationContext.jsx';
+import AuthGate from './auth/AuthGate.jsx';
 import { footballFixtures, championsLeagueFixtures, tennisFixtures, boxingFixtures, nflFixtures, nbaFixtures } from './data/fixtures.js';
 import { matchDetails } from './data/matchDetails.js';
 import {
@@ -31,7 +41,6 @@ import {
   useNbaOdds,
   useHorseRacingOdds,
 } from './hooks/useOdds.js';
-import { GamificationProvider } from './context/GamificationContext.jsx';
 import SwipeFeed from './components/SwipeFeed.jsx';
 import DailyChallengeCard from './components/DailyChallengeCard.jsx';
 import PredictionFeed from './components/PredictionFeed.jsx';
@@ -340,6 +349,7 @@ function MarketsView({ onSportSelect, fixtureCounts }) {
 function AccountView({ onOpenMyBets }) {
   const { user } = useUser();
   const { selections } = useBetSlip();
+  const { logout } = useAuth();
 
   return (
     <div>
@@ -446,6 +456,26 @@ function AccountView({ onOpenMyBets }) {
             <ChevronRight className="w-4 h-4" style={{ color: C.textMuted }} />
           </button>
         ))}
+
+        {/* Sign out */}
+        <button
+          onClick={logout}
+          className="w-full flex items-center justify-between px-4 py-4 rounded-xl transition-all duration-200"
+          style={{ background: 'rgba(255,51,102,0.04)', border: '1px solid rgba(255,51,102,0.12)' }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(255,51,102,0.08)';
+            e.currentTarget.style.borderColor = 'rgba(255,51,102,0.25)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'rgba(255,51,102,0.04)';
+            e.currentTarget.style.borderColor = 'rgba(255,51,102,0.12)';
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🚪</span>
+            <span className="text-sm font-medium" style={{ color: '#FF3366' }}>Sign out</span>
+          </div>
+        </button>
       </div>
 
       {/* Legal footer */}
@@ -605,6 +635,7 @@ function AppContent() {
   const [myBetsOpen, setMyBetsOpen] = useState(false);
   const [selectedFixture, setSelectedFixture] = useState(null);
   const isMobile = useIsMobile();
+  const { logout } = useAuth();
 
   // Scroll to top when active view changes
   useEffect(() => {
@@ -666,6 +697,7 @@ function AppContent() {
 
   function handleDropdownAction(actionId) {
     if (actionId === 'mybets') setMyBetsOpen(true);
+    if (actionId === 'signout') logout();
   }
 
   function handleSportChange(sport) {
@@ -1147,17 +1179,29 @@ function AppContent() {
   );
 }
 
+// ── Provider tree ─────────────────────────────────────────────────────────────
+// AuthProvider is outermost — everything needs auth state.
+// AuthGate decides what to render (LandingScreen vs AppContent).
+// UserProvider is inside AuthGate so it only mounts when authenticated,
+// receiving the authenticated user profile via the initialUser prop.
+// OddsFormatProvider and BetSlipProvider are inside UserProvider as they
+// depend on the authenticated session being established.
+
 function App() {
   return (
-    <OddsFormatProvider>
-      <UserProvider>
+    <AuthProvider>
+      <OddsFormatProvider>
         <BetSlipProvider>
           <GamificationProvider>
-            <AppContent />
+            <AuthGate>
+              <UserProvider>
+                <AppContent />
+              </UserProvider>
+            </AuthGate>
           </GamificationProvider>
         </BetSlipProvider>
-      </UserProvider>
-    </OddsFormatProvider>
+      </OddsFormatProvider>
+    </AuthProvider>
   );
 }
 
