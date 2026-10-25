@@ -568,7 +568,62 @@ app.get('/{*path}', (_req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
+// ── Background cache refresh ──────────────────────────────────────────────────
+const REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+async function refreshAllOdds() {
+  if (!ODDS_API_KEY) return;
+  console.log('[cache] Refreshing all odds caches…');
+
+  const jobs = [
+    { key: 'soccer_epl',                     cacheKey: 'football_epl',  fn: transformThreeWayEvent, opts: { sport: 'football', competition: 'Premier League', competitionShort: 'PL' } },
+    { key: 'soccer_uefa_champs_league',       cacheKey: 'football_ucl',  fn: transformThreeWayEvent, opts: { sport: 'football', competition: 'Champions League', competitionShort: 'UCL' } },
+    { key: 'soccer_efl_champ',               cacheKey: 'football_efl',  fn: transformThreeWayEvent, opts: { sport: 'football', competition: 'EFL Championship', competitionShort: 'EFL' } },
+    { key: 'soccer_spain_la_liga',            cacheKey: 'football_laliga', fn: transformThreeWayEvent, opts: { sport: 'football', competition: 'La Liga', competitionShort: 'LAL' } },
+    { key: 'boxing',                          cacheKey: 'boxing',        fn: transformTwoWayEvent,   opts: { sport: 'boxing', competition: 'Boxing', competitionShort: 'BOX' } },
+    { key: 'mma_mixed_martial_arts',          cacheKey: 'mma',           fn: transformTwoWayEvent,   opts: { sport: 'boxing', competition: 'UFC / MMA', competitionShort: 'MMA' } },
+    { key: 'americanfootball_nfl',            cacheKey: 'nfl',           fn: transformTwoWayEvent,   opts: { sport: 'americanfootball', competition: 'NFL', competitionShort: 'NFL' } },
+    { key: 'basketball_nba',                  cacheKey: 'nba',           fn: transformTwoWayEvent,   opts: { sport: 'basketball', competition: 'NBA', competitionShort: 'NBA' } },
+  ];
+
+  for (const { key, cacheKey, fn, opts } of jobs) {
+    try {
+      const data = await oddsApiFetch(`/sports/${key}/odds`, {
+        regions: 'uk', markets: 'h2h', oddsFormat: 'decimal', dateFormat: 'iso',
+      });
+      const events = data.map(ev => fn(ev, opts)).filter(Boolean).slice(0, 12);
+      setCache(cacheKey, events);
+      console.log(`[cache] ${cacheKey}: ${events.length} events`);
+    } catch (err) {
+      console.error(`[cache] ${cacheKey} failed:`, err.message);
+    }
+    // Small delay between requests to avoid rate limiting
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  // Horse racing
+  try {
+    const data = await oddsApiFetch('/sports/horse_racing_uk_and_ire_win_market/odds', {
+      regions: 'uk', markets: 'h2h', oddsFormat: 'decimal', dateFormat: 'iso',
+    });
+    const events = data.map(ev => transformHorseRaceEvent(ev)).filter(Boolean).slice(0, 8);
+    setCache('horse_racing', events);
+    console.log(`[cache] horse_racing: ${events.length} events`);
+  } catch (err) {
+    console.error('[cache] horse_racing failed:', err.message);
+  }
+
+  console.log('[cache] Refresh complete');
+}
+
 app.listen(PORT, () => {
   console.log(`PUNT server running on port ${PORT}`);
-  console.log(`Odds API key: ${ODDS_API_KEY ? 'configured' : 'MISSING — serving empty data for live sports'}`);
+  console.log(`Odds API key: ${ODDS_API_KEY ? 'configured' : 'MISSING — serving mock data'}`);
+
+  if (ODDS_API_KEY) {
+    // Warm the cache immediately on startup, then every 2 hours
+    refreshAllOdds();
+    setInterval(refreshAllOdds, REFRESH_INTERVAL_MS);
+    console.log(`[cache] Background refresh scheduled every 2 hours`);
+  }
 });
