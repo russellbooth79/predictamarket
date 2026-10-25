@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -14,19 +15,39 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
 const ODDS_API_BASE = 'https://api.the-odds-api.com/v4';
 
-// ── In-memory cache ──────────────────────────────────────────────────────────
+// ── Disk-backed cache ─────────────────────────────────────────────────────────
+const CACHE_DIR = path.join(__dirname, 'data', 'odds-cache');
+fs.mkdirSync(CACHE_DIR, { recursive: true });
+
 const cache = new Map();
-const CACHE_TTL_MS = 5 * 60 * 1000;
 const SPORTS_CACHE_TTL_MS = 10 * 60 * 1000;
 
-function getCached(key, ttl = CACHE_TTL_MS) {
-  const entry = cache.get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.ts > ttl) { cache.delete(key); return null; }
-  return entry.data;
+function diskPath(key) {
+  return path.join(CACHE_DIR, `${key}.json`);
 }
+
+function getCached(key) {
+  // Serve from memory first
+  if (cache.has(key)) return cache.get(key);
+  // Fall back to disk (survives restarts)
+  try {
+    const raw = fs.readFileSync(diskPath(key), 'utf8');
+    const { data } = JSON.parse(raw);
+    cache.set(key, data); // warm memory
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 function setCache(key, data) {
-  cache.set(key, { data, ts: Date.now() });
+  cache.set(key, data);
+  // Persist to disk so data survives service restarts
+  try {
+    fs.writeFileSync(diskPath(key), JSON.stringify({ savedAt: new Date().toISOString(), data }, null, 2));
+  } catch (err) {
+    console.error(`[cache] Failed to write ${key} to disk:`, err.message);
+  }
 }
 
 // ── Odds API fetch helper ─────────────────────────────────────────────────────
@@ -554,10 +575,23 @@ app.get('/api/sports', async (req, res) => {
 });
 
 app.get('/api/health', (_req, res) => {
+  // Read savedAt timestamps from disk for each cache key
+  const knownKeys = ['football_epl','football_ucl','football_efl','football_laliga','boxing','mma','nfl','nba','horse_racing'];
+  const cacheInfo = {};
+  for (const key of knownKeys) {
+    try {
+      const raw = fs.readFileSync(diskPath(key), 'utf8');
+      const { savedAt, data } = JSON.parse(raw);
+      cacheInfo[key] = { savedAt, count: Array.isArray(data) ? data.length : 0 };
+    } catch {
+      cacheInfo[key] = null;
+    }
+  }
   res.json({
     status: 'ok',
     hasApiKey: !!ODDS_API_KEY,
-    cacheSize: cache.size,
+    nextRefresh: nextRefreshTime ? nextRefreshTime.toISOString() : null,
+    cache: cacheInfo,
     timestamp: new Date().toISOString(),
   });
 });
@@ -568,8 +602,26 @@ app.get('/{*path}', (_req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// ── Background cache refresh ──────────────────────────────────────────────────
-const REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
+// ── Daily 9am odds refresh ────────────────────────────────────────────────────
+let nextRefreshTime = null;
+
+function msUntilNext9am() {
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(9, 0, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  return next - now;
+}
+
+function scheduleDailyRefresh() {
+  const ms = msUntilNext9am();
+  nextRefreshTime = new Date(Date.now() + ms);
+  console.log(`[cache] Next refresh scheduled at ${nextRefreshTime.toISOString()} (in ${Math.round(ms / 60000)} min)`);
+  setTimeout(async () => {
+    await refreshAllOdds();
+    scheduleDailyRefresh(); // reschedule for the following day
+  }, ms);
+}
 
 async function refreshAllOdds() {
   if (!ODDS_API_KEY) return;
@@ -621,9 +673,19 @@ app.listen(PORT, () => {
   console.log(`Odds API key: ${ODDS_API_KEY ? 'configured' : 'MISSING — serving mock data'}`);
 
   if (ODDS_API_KEY) {
-    // Warm the cache immediately on startup, then every 2 hours
-    refreshAllOdds();
-    setInterval(refreshAllOdds, REFRESH_INTERVAL_MS);
-    console.log(`[cache] Background refresh scheduled every 2 hours`);
+    // On startup: load from disk (free), only hit the API if no disk cache exists
+    const knownKeys = ['football_epl','football_ucl','football_efl','football_laliga','boxing','mma','nfl','nba','horse_racing'];
+    const hasDiskCache = knownKeys.some(k => {
+      try { fs.accessSync(diskPath(k)); return true; } catch { return false; }
+    });
+
+    if (!hasDiskCache) {
+      console.log('[cache] No disk cache found — fetching from API on startup');
+      refreshAllOdds();
+    } else {
+      console.log('[cache] Disk cache found — skipping startup fetch, scheduled for 9am');
+    }
+
+    scheduleDailyRefresh();
   }
 });
