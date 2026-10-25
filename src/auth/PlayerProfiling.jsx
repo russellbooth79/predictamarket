@@ -33,7 +33,7 @@ const STEPS = {
   STYLE:  'style',
 };
 
-export default function PlayerProfiling() {
+export default function PlayerProfiling({ isOpen }) {
   const { user, savePreferences, closeProfiling } = useAuth();
 
   const [step, setStep] = useState(STEPS.INTENT);
@@ -87,7 +87,7 @@ export default function PlayerProfiling() {
 
   return (
     <AnimatePresence>
-      <motion.div
+      {isOpen && <motion.div
         className="fixed inset-0 flex flex-col"
         style={{
           zIndex: 120,
@@ -130,6 +130,7 @@ export default function PlayerProfiling() {
               <SportsSelector
                 onNext={handleSportsNext}
                 onBack={() => { setDir(-1); setStep(STEPS.INTENT); }}
+                onSkip={handleSkip}
                 isFinalStep={intent === 'sports'}
               />
             )}
@@ -145,7 +146,7 @@ export default function PlayerProfiling() {
         </AnimatePresence>
 
         <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }} />
-      </motion.div>
+      </motion.div>}
     </AnimatePresence>
   );
 }

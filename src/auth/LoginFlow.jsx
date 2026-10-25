@@ -80,9 +80,11 @@ export default function LoginFlow({ isOpen }) {
   async function handleSSO(provider) {
     setSsoLoading(provider);
     try {
-      await ssoSignIn(provider);
-      // SSO login: skip OTP, directly authenticate
-      loginWithPhone('+447700000001');
+      const result = await ssoSignIn(provider);
+      // SSO login: use phone from result, or fall back to a provider-scoped placeholder
+      // that won't collide with a real registered number
+      const ssoPhone = result?.phone ?? `+44sso_${provider}`;
+      loginWithPhone(ssoPhone);
     } catch {
       setPhoneError('Sign-in failed. Please try again.');
     } finally {
@@ -147,8 +149,8 @@ export default function LoginFlow({ isOpen }) {
                     onBack={() => { setDir(-1); setStep(1); }}
                     verifyOTP={verifyOTP}
                     sendOTP={sendOTP}
-                    totalSteps={1}
-                    currentStep={0}
+                    totalSteps={2}
+                    currentStep={1}
                   />
                 )}
               </motion.div>

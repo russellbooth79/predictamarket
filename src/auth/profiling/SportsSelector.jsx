@@ -24,7 +24,7 @@ const STYLE_OPTIONS = [
   { value: 'accas',    label: 'Building accas' },
 ];
 
-export default function SportsSelector({ onNext, onBack, isFinalStep = false }) {
+export default function SportsSelector({ onNext, onBack, onSkip, isFinalStep = false }) {
   const [selectedSports, setSelectedSports] = useState([]);
   const [bettingStyle, setBettingStyle] = useState(null);
 
@@ -54,7 +54,17 @@ export default function SportsSelector({ onNext, onBack, isFinalStep = false }) 
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div className="w-9" />
+        {onSkip && (
+          <button
+            type="button"
+            onClick={onSkip}
+            className="text-sm font-semibold"
+            style={{ color: '#7B8CAA' }}
+          >
+            Skip
+          </button>
+        )}
+        {!onSkip && <div className="w-9" />}
       </div>
 
       <h1 className="text-2xl font-black mb-2" style={{ color: '#F0F6FF' }}>

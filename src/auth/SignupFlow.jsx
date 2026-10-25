@@ -73,15 +73,18 @@ export default function SignupFlow({ isOpen }) {
     closeAuthModal();
   }
 
-  const handleCompleteSignup = useCallback((stepData) => {
+  const handleCompleteSignup = useCallback(async (stepData) => {
     const allData = { ...formData, ...stepData };
     setSubmitting(true);
-    // completeSignup is synchronous in this prototype — assembles profile and dispatches
-    completeSignup(allData);
-    // Reset wizard state after completion
-    setStep(1);
-    setFormData({});
-    setSubmitting(false);
+    try {
+      // completeSignup is synchronous in this prototype — assembles profile and dispatches
+      completeSignup(allData);
+      // Reset wizard state after completion
+      setStep(1);
+      setFormData({});
+    } finally {
+      setSubmitting(false);
+    }
   }, [formData, completeSignup]);
 
   // Map step number to dot index (steps 2-5 → dots 0-3)
@@ -114,7 +117,7 @@ export default function SignupFlow({ isOpen }) {
               initial="enter"
               animate="center"
               exit="exit"
-              className="flex flex-col flex-1 overflow-y-auto"
+              className="flex flex-col flex-1 min-h-0"
               style={{ maxWidth: '480px', margin: '0 auto', width: '100%' }}
             >
               {step === 1 && (

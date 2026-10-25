@@ -20,21 +20,26 @@ function Checkbox({ checked, onChange, children, id }) {
       htmlFor={id}
       className="flex items-start gap-3 cursor-pointer select-none"
     >
-      <button
-        type="button"
+      {/* Visually-hidden native checkbox for accessibility and correct click handling */}
+      <input
+        type="checkbox"
         id={id}
-        onClick={onChange}
+        checked={checked}
+        onChange={onChange}
+        className="sr-only"
+      />
+      {/* Custom visual indicator — aria-hidden because the real input handles a11y */}
+      <span
+        aria-hidden="true"
         className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-150 mt-0.5"
         style={{
           background: checked ? 'linear-gradient(135deg, #6C63FF, #B06FFF)' : 'rgba(255,255,255,0.05)',
           border: `1.5px solid ${checked ? '#6C63FF' : 'rgba(255,255,255,0.15)'}`,
           boxShadow: checked ? '0 2px 8px rgba(108,99,255,0.3)' : 'none',
         }}
-        aria-checked={checked}
-        role="checkbox"
       >
         {checked && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
-      </button>
+      </span>
       <span className="text-sm leading-relaxed" style={{ color: '#7B8CAA' }}>
         {children}
       </span>

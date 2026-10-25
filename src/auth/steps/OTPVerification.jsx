@@ -249,7 +249,7 @@ export default function OTPVerification({
       <AuthButton
         variant="primary-gradient"
         loading={loading}
-        disabled={digits.join('').length !== 6}
+        disabled={digits.join('').length !== 6 || loading}
         onClick={() => handleVerify()}
         className="mb-6"
       >

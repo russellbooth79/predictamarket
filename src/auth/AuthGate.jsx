@@ -67,8 +67,8 @@ export default function AuthGate({ children }) {
       <SignupFlow isOpen={authModal === 'signup'} />
       <LoginFlow  isOpen={authModal === 'login'}  />
 
-      {/* Profiling only makes sense when authenticated */}
-      {isAuthenticated && profilingOpen && <PlayerProfiling />}
+      {/* Profiling — isOpen prop lets AnimatePresence handle the exit transition */}
+      {isAuthenticated && <PlayerProfiling isOpen={profilingOpen} />}
     </>
   );
 }

@@ -116,7 +116,7 @@ export default function PersonalDetails({ onNext, onBack, prefill = {}, totalSte
   function handleNext() {
     if (!validate()) return;
     const address = showManual
-      ? { line1: manualLine1, line2: null, city: manualCity, postcode }
+      ? { line1: manualLine1.trim(), line2: null, city: manualCity.trim(), postcode: postcode.trim() }
       : selectedAddress;
     onNext({
       firstName: firstName.trim(),
@@ -129,10 +129,13 @@ export default function PersonalDetails({ onNext, onBack, prefill = {}, totalSte
   }
 
   const isFormFilled = firstName && lastName && email && dobDay && dobMonth && dobYear.length === 4
-    && (selectedAddress || (showManual && manualLine1));
+    && (selectedAddress || (showManual && manualLine1 && manualCity));
 
   return (
-    <div className="flex flex-col h-full px-6 pt-6 pb-8 overflow-y-auto">
+    <div className="flex flex-col h-full">
+      {/* ── Scrollable content ─────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4" style={{ scrollPaddingBottom: '280px' }}>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <button
@@ -383,15 +386,27 @@ export default function PersonalDetails({ onNext, onBack, prefill = {}, totalSte
         )}
       </div>
 
-      {/* CTA */}
-      <AuthButton
-        variant="primary-gradient"
-        disabled={!isFormFilled}
-        onClick={handleNext}
-        className="mt-4"
+      </div> {/* end scrollable content */}
+
+      {/* Sticky footer — always visible, respects home indicator */}
+      <div
+        className="px-6 pt-4"
+        style={{
+          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          background: 'rgba(5,8,15,0.95)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+        }}
       >
-        Create my account
-      </AuthButton>
+        <AuthButton
+          variant="primary-gradient"
+          disabled={!isFormFilled}
+          onClick={handleNext}
+        >
+          Create my account
+        </AuthButton>
+      </div>
     </div>
   );
 }
