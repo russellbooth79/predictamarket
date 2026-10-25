@@ -472,13 +472,13 @@ function HorseRacingEmpty() {
 
 // ── Mobile Bottom Nav — TikTok style, raised centre Bet Slip button ──────────
 
-function MobileBottomNav({ activeTab, onTabChange, betSlipCount }) {
+function MobileBottomNav({ activeTab, onTabChange, betSlipCount, liveCount }) {
   const leftTabs  = [
-    { id: 'home',    label: 'Home',    Icon: Home },
-    { id: 'explore', label: 'Explore', Icon: Zap },
+    { id: 'home', label: 'Home', Icon: Home },
+    { id: 'live', label: 'Live', Icon: Zap },
   ];
   const rightTabs = [
-    { id: 'casino',  label: 'Casino',  Icon: Star },
+    { id: 'markets', label: 'Markets', Icon: LayoutGrid },
     { id: 'account', label: 'Account', Icon: User },
   ];
 
@@ -502,7 +502,7 @@ function MobileBottomNav({ activeTab, onTabChange, betSlipCount }) {
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className="flex flex-col items-center gap-0.5 py-2 px-4 relative flex-1"
+            className="flex flex-col items-center gap-0.5 py-2 px-4 relative flex-1 active:opacity-60"
           >
             <div className="relative">
               <Icon
@@ -512,11 +512,13 @@ function MobileBottomNav({ activeTab, onTabChange, betSlipCount }) {
                   filter: isActive ? 'drop-shadow(0 0 6px rgba(108,99,255,0.6))' : 'none',
                 }}
               />
-              {tab.id === 'live' && (
+              {tab.id === 'live' && liveCount > 0 && (
                 <span
-                  className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full animate-pulse"
-                  style={{ backgroundColor: '#FF3366' }}
-                />
+                  className="absolute -top-1.5 -right-2 min-w-[16px] h-4 rounded-full text-[9px] font-black flex items-center justify-center px-1 text-white"
+                  style={{ background: 'linear-gradient(135deg, #FF3366, #FF6B35)' }}
+                >
+                  {liveCount > 9 ? '9+' : liveCount}
+                </span>
               )}
             </div>
             <span
@@ -1055,7 +1057,7 @@ function AppContent() {
                       cards.push(casinoCta);
                     }
 
-                    return <SwipeFeed>{cards}</SwipeFeed>;
+                    return <SwipeFeed topOffset={totalLiveCount > 0 ? 168 : 136}>{cards}</SwipeFeed>;
                   })()}
 
                   {activeSport === 'horseracing' && (
@@ -1137,6 +1139,7 @@ function AppContent() {
             activeTab={activeBottomTab}
             onTabChange={handleBottomNavTab}
             betSlipCount={count}
+            liveCount={totalLiveCount}
           />
         )}
       </BetSlipCountBridge>

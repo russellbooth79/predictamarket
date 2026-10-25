@@ -468,7 +468,7 @@ export default function EventCard({ fixture, index = 0, onViewMatch, hero = fals
               <span className="text-xs">{formatKickoff(fixture.kickoff, false, null)}</span>
             </div>
           )}
-          <button style={{ color: C.textMuted }}><Heart className="w-3.5 h-3.5" /></button>
+          <button className="flex items-center justify-center w-8 h-8 active:opacity-60" style={{ color: C.textMuted }}><Heart className="w-3.5 h-3.5" /></button>
         </div>
       </div>
 

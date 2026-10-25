@@ -47,8 +47,8 @@ export default function TopBar({ activeSport, onSportChange, onDropdownAction })
         setDropdownOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('pointerdown', handleClick);
+    return () => document.removeEventListener('pointerdown', handleClick);
   }, [dropdownOpen]);
 
   function handleDropdownAction(actionId) {

@@ -371,7 +371,7 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                     </p>
                     <button
                       onClick={() => removeSelection(sel.eventId)}
-                      className="p-0.5 shrink-0 transition-colors"
+                      className="shrink-0 transition-colors flex items-center justify-center w-8 h-8 -mr-1 active:opacity-60"
                       style={{ color: '#3A4560' }}
                       onMouseEnter={e => e.currentTarget.style.color = '#FF3366'}
                       onMouseLeave={e => e.currentTarget.style.color = '#3A4560'}
@@ -596,8 +596,9 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
         {hasSelections && !mobileOpen && (
           <button
             onClick={() => setMobileOpen(true)}
-            className="fixed bottom-20 right-6 z-[60] w-14 h-14 rounded-full text-white flex items-center justify-center"
+            className="fixed right-6 z-[60] w-14 h-14 rounded-full text-white flex items-center justify-center"
             style={{
+              bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))',
               background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)',
               boxShadow: '0 6px 20px rgba(108,99,255,0.5)',
             }}

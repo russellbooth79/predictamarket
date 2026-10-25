@@ -29,7 +29,7 @@ export default function SwipeFeed({ children, topOffset = 136 }) {
       style={{
         position: 'fixed',
         top: topOffset,
-        bottom: BOTTOM_NAV_H,
+        bottom: `calc(${BOTTOM_NAV_H}px + env(safe-area-inset-bottom, 0px))`,
         left: 0,
         right: 0,
         overflowY: 'scroll',

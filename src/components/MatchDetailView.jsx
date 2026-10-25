@@ -774,7 +774,7 @@ export default function MatchDetailView({ fixture, detail, onBack }) {
               }}
             >
               <Icon className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="text-[9px]">{tab.label}</span>
             </button>
           );
         })}
