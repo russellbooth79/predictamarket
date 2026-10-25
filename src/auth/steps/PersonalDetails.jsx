@@ -177,62 +177,76 @@ export default function PersonalDetails({ onNext, onBack, prefill = {}, totalSte
         />
       </div>
 
-      {/* Date of birth */}
+      {/* Date of birth — three labelled boxes with / separators */}
       <div className="mb-4">
         <label className="text-sm font-medium mb-1.5 block" style={{ color: '#7B8CAA' }}>
           Date of birth
         </label>
-        <div className="flex gap-3">
-          <input
-            type="text"
-            inputMode="numeric"
-            value={dobDay}
-            onChange={handleDobDay}
-            placeholder="DD"
-            maxLength={2}
-            className="flex-1 text-center font-mono text-base rounded-xl outline-none transition-all"
-            style={{
-              height: '56px',
-              background: 'rgba(255,255,255,0.04)',
-              border: `1.5px solid ${errors.dob ? '#FF3366' : 'rgba(255,255,255,0.1)'}`,
-              color: '#F0F6FF',
-              caretColor: '#6C63FF',
-            }}
-          />
-          <input
-            ref={dobMonthRef}
-            type="text"
-            inputMode="numeric"
-            value={dobMonth}
-            onChange={handleDobMonth}
-            placeholder="MM"
-            maxLength={2}
-            className="flex-1 text-center font-mono text-base rounded-xl outline-none transition-all"
-            style={{
-              height: '56px',
-              background: 'rgba(255,255,255,0.04)',
-              border: `1.5px solid ${errors.dob ? '#FF3366' : 'rgba(255,255,255,0.1)'}`,
-              color: '#F0F6FF',
-              caretColor: '#6C63FF',
-            }}
-          />
-          <input
-            ref={dobYearRef}
-            type="text"
-            inputMode="numeric"
-            value={dobYear}
-            onChange={handleDobYear}
-            placeholder="YYYY"
-            maxLength={4}
-            className="flex-[2] text-center font-mono text-base rounded-xl outline-none transition-all"
-            style={{
-              height: '56px',
-              background: 'rgba(255,255,255,0.04)',
-              border: `1.5px solid ${errors.dob ? '#FF3366' : 'rgba(255,255,255,0.1)'}`,
-              color: '#F0F6FF',
-              caretColor: '#6C63FF',
-            }}
-          />
+        <div className="flex items-start gap-2">
+          {/* Day */}
+          <div className="flex flex-col flex-1">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={dobDay}
+              onChange={handleDobDay}
+              placeholder="DD"
+              maxLength={2}
+              className="w-full text-center font-mono text-base rounded-xl outline-none transition-all"
+              style={{
+                height: '52px',
+                background: 'rgba(255,255,255,0.04)',
+                border: `1.5px solid ${errors.dob ? '#FF3366' : 'rgba(255,255,255,0.1)'}`,
+                color: '#F0F6FF',
+                caretColor: '#6C63FF',
+              }}
+            />
+            <span className="text-[10px] text-center mt-1 font-medium" style={{ color: '#3A4560' }}>Day</span>
+          </div>
+          <span className="font-mono text-base mt-3 shrink-0" style={{ color: '#3A4560' }}>/</span>
+          {/* Month */}
+          <div className="flex flex-col flex-1">
+            <input
+              ref={dobMonthRef}
+              type="text"
+              inputMode="numeric"
+              value={dobMonth}
+              onChange={handleDobMonth}
+              placeholder="MM"
+              maxLength={2}
+              className="w-full text-center font-mono text-base rounded-xl outline-none transition-all"
+              style={{
+                height: '52px',
+                background: 'rgba(255,255,255,0.04)',
+                border: `1.5px solid ${errors.dob ? '#FF3366' : 'rgba(255,255,255,0.1)'}`,
+                color: '#F0F6FF',
+                caretColor: '#6C63FF',
+              }}
+            />
+            <span className="text-[10px] text-center mt-1 font-medium" style={{ color: '#3A4560' }}>Month</span>
+          </div>
+          <span className="font-mono text-base mt-3 shrink-0" style={{ color: '#3A4560' }}>/</span>
+          {/* Year */}
+          <div className="flex flex-col" style={{ flex: 2 }}>
+            <input
+              ref={dobYearRef}
+              type="text"
+              inputMode="numeric"
+              value={dobYear}
+              onChange={handleDobYear}
+              placeholder="YYYY"
+              maxLength={4}
+              className="w-full text-center font-mono text-base rounded-xl outline-none transition-all"
+              style={{
+                height: '52px',
+                background: 'rgba(255,255,255,0.04)',
+                border: `1.5px solid ${errors.dob ? '#FF3366' : 'rgba(255,255,255,0.1)'}`,
+                color: '#F0F6FF',
+                caretColor: '#6C63FF',
+              }}
+            />
+            <span className="text-[10px] text-center mt-1 font-medium" style={{ color: '#3A4560' }}>Year</span>
+          </div>
         </div>
         {errors.dob && <p className="text-xs mt-1" style={{ color: '#FF3366' }}>{errors.dob}</p>}
       </div>

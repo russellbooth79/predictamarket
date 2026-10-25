@@ -61,7 +61,7 @@ import MatchDetailView from './components/MatchDetailView.jsx';
 import {
   Trophy, Radio, Calendar, Star,
   Home, Zap, LayoutGrid, BarChart3, User,
-  ChevronRight, Clock, Activity,
+  ChevronRight, Clock, Activity, Dices,
 } from 'lucide-react';
 
 // ── Colour palette — v4 dark sport futurism ───────────────────────────────────
@@ -346,10 +346,20 @@ function MarketsView({ onSportSelect, fixtureCounts }) {
 
 // ── Account View ──────────────────────────────────────────────────────────────
 
+const INTENT_OPTIONS = [
+  { value: 'sports', label: 'Sports Betting', emoji: '⚽', desc: 'Fixtures, live odds, bet slip' },
+  { value: 'casino', label: 'Casino',         emoji: '🎰', desc: 'Live tables, slots, crash games' },
+  { value: 'both',   label: 'Sports + Casino', emoji: '🎯', desc: 'The full PUNT experience' },
+];
+
 function AccountView({ onOpenMyBets }) {
   const { user } = useUser();
   const { selections } = useBetSlip();
-  const { logout } = useAuth();
+  const { logout, savePreferences } = useAuth();
+  const [editingIntent, setEditingIntent] = useState(false);
+
+  const intent = user?.preferences?.intent ?? null;
+  const currentIntentOption = INTENT_OPTIONS.find(o => o.value === intent);
 
   return (
     <div>
@@ -429,6 +439,74 @@ function AccountView({ onOpenMyBets }) {
           <ChevronRight className="w-4 h-4" style={{ color: '#9B8FFF' }} />
         </button>
 
+        {/* My Interests — change Sports / Casino / Both preference */}
+        <div>
+          <button
+            onClick={() => setEditingIntent(v => !v)}
+            className="w-full flex items-center justify-between px-4 py-4 rounded-xl transition-all duration-200"
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-lg">🎯</span>
+              <div className="text-left">
+                <p className="text-sm font-medium" style={{ color: C.text }}>My Interests</p>
+                <p className="text-xs" style={{ color: C.textSecondary }}>
+                  {currentIntentOption ? currentIntentOption.label : 'Choose your products'}
+                </p>
+              </div>
+            </div>
+            <ChevronRight
+              className="w-4 h-4 transition-transform duration-200"
+              style={{ color: C.textMuted, transform: editingIntent ? 'rotate(90deg)' : 'none' }}
+            />
+          </button>
+
+          {editingIntent && (
+            <div
+              className="mt-1 rounded-xl overflow-hidden"
+              style={{ border: '1px solid rgba(108,99,255,0.2)', background: 'rgba(8,12,24,0.95)' }}
+            >
+              {INTENT_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => {
+                    savePreferences({ intent: opt.value });
+                    setEditingIntent(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors"
+                  style={{
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    background: intent === opt.value ? 'rgba(108,99,255,0.12)' : 'transparent',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(108,99,255,0.08)'; }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = intent === opt.value ? 'rgba(108,99,255,0.12)' : 'transparent';
+                  }}
+                >
+                  <span className="text-xl shrink-0">{opt.emoji}</span>
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: intent === opt.value ? '#9B8FFF' : C.text }}>
+                      {opt.label}
+                    </p>
+                    <p className="text-xs" style={{ color: C.textSecondary }}>{opt.desc}</p>
+                  </div>
+                  {intent === opt.value && (
+                    <span className="ml-auto text-xs font-bold" style={{ color: '#6C63FF' }}>✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {[
           { label: 'Deposit Funds', icon: '💳' },
           { label: 'Withdrawal', icon: '🏦' },
@@ -502,15 +580,23 @@ function HorseRacingEmpty() {
 
 // ── Mobile Bottom Nav — TikTok style, raised centre Bet Slip button ──────────
 
-function MobileBottomNav({ activeTab, onTabChange, betSlipCount, liveCount }) {
-  const leftTabs  = [
-    { id: 'home', label: 'Home', Icon: Home },
-    { id: 'live', label: 'Live', Icon: Zap },
-  ];
-  const rightTabs = [
-    { id: 'markets', label: 'Markets', Icon: LayoutGrid },
-    { id: 'account', label: 'Account', Icon: User },
-  ];
+// ── Nav tab config per intent ─────────────────────────────────────────────────
+// sports → Home + Live on left, Markets + Account on right, slip centre
+// casino → Casino on left, Account on right, no slip (casino has no bet slip)
+// both / null → Home + Live on left, Casino + Account on right, slip centre
+
+function MobileBottomNav({ activeTab, onTabChange, betSlipCount, liveCount, intent }) {
+  const isCasinoOnly = intent === 'casino';
+
+  const leftTabs = isCasinoOnly
+    ? [{ id: 'casino', label: 'Casino', Icon: Dices }]
+    : [{ id: 'home', label: 'Home', Icon: Home }, { id: 'live', label: 'Live', Icon: Zap }];
+
+  const rightTabs = isCasinoOnly
+    ? [{ id: 'account', label: 'Account', Icon: User }]
+    : intent === 'sports'
+    ? [{ id: 'markets', label: 'Markets', Icon: LayoutGrid }, { id: 'account', label: 'Account', Icon: User }]
+    : [{ id: 'casino', label: 'Casino', Icon: Dices }, { id: 'account', label: 'Account', Icon: User }];
 
   return (
     <nav
@@ -551,43 +637,44 @@ function MobileBottomNav({ activeTab, onTabChange, betSlipCount, liveCount }) {
                 </span>
               )}
             </div>
-            <span
-              className="text-[10px] font-semibold"
-              style={{ color: isActive ? '#9B8FFF' : '#3A4560' }}
-            >
+            <span className="text-[10px] font-semibold" style={{ color: isActive ? '#9B8FFF' : '#3A4560' }}>
               {tab.label}
             </span>
           </button>
         );
       })}
 
-      {/* Centre raised Bet Slip button */}
-      <div className="flex flex-col items-center relative" style={{ marginBottom: '10px' }}>
-        <button
-          onClick={() => onTabChange('betslip')}
-          className="w-16 h-16 rounded-full flex items-center justify-center relative"
-          style={{
-            background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)',
-            boxShadow: activeTab === 'betslip'
-              ? '0 0 0 3px rgba(108,99,255,0.3), 0 8px 24px rgba(108,99,255,0.5)'
-              : '0 4px 20px rgba(108,99,255,0.4)',
-            border: '3px solid rgba(5,8,15,0.97)',
-          }}
-        >
-          <LayoutGrid className="w-6 h-6 text-white" />
-          {betSlipCount > 0 && (
-            <span
-              className="absolute -top-1 -right-1 min-w-[20px] h-5 rounded-full text-[10px] font-black flex items-center justify-center px-1.5 text-white"
-              style={{ background: 'linear-gradient(135deg, #FF3366, #FF6B35)' }}
-            >
-              {betSlipCount > 9 ? '9+' : betSlipCount}
-            </span>
-          )}
-        </button>
-        <span className="text-[10px] font-semibold mt-0.5" style={{ color: activeTab === 'betslip' ? '#9B8FFF' : '#3A4560' }}>
-          Slip
-        </span>
-      </div>
+      {/* Centre raised Bet Slip — hidden for casino-only (no slip workflow) */}
+      {!isCasinoOnly ? (
+        <div className="flex flex-col items-center relative" style={{ marginBottom: '10px' }}>
+          <button
+            onClick={() => onTabChange('betslip')}
+            className="w-16 h-16 rounded-full flex items-center justify-center relative"
+            style={{
+              background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)',
+              boxShadow: activeTab === 'betslip'
+                ? '0 0 0 3px rgba(108,99,255,0.3), 0 8px 24px rgba(108,99,255,0.5)'
+                : '0 4px 20px rgba(108,99,255,0.4)',
+              border: '3px solid rgba(5,8,15,0.97)',
+            }}
+          >
+            <LayoutGrid className="w-6 h-6 text-white" />
+            {betSlipCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 min-w-[20px] h-5 rounded-full text-[10px] font-black flex items-center justify-center px-1.5 text-white"
+                style={{ background: 'linear-gradient(135deg, #FF3366, #FF6B35)' }}
+              >
+                {betSlipCount > 9 ? '9+' : betSlipCount}
+              </span>
+            )}
+          </button>
+          <span className="text-[10px] font-semibold mt-0.5" style={{ color: activeTab === 'betslip' ? '#9B8FFF' : '#3A4560' }}>
+            Slip
+          </span>
+        </div>
+      ) : (
+        <div className="flex-1" />
+      )}
 
       {/* Right tabs */}
       {rightTabs.map(tab => {
@@ -606,10 +693,7 @@ function MobileBottomNav({ activeTab, onTabChange, betSlipCount, liveCount }) {
                 filter: isActive ? 'drop-shadow(0 0 6px rgba(108,99,255,0.6))' : 'none',
               }}
             />
-            <span
-              className="text-[10px] font-semibold"
-              style={{ color: isActive ? '#9B8FFF' : '#3A4560' }}
-            >
+            <span className="text-[10px] font-semibold" style={{ color: isActive ? '#9B8FFF' : '#3A4560' }}>
               {tab.label}
             </span>
           </button>
@@ -629,13 +713,23 @@ function BetSlipCountBridge({ children }) {
 // ── Main App ──────────────────────────────────────────────────────────────────
 
 function AppContent() {
-  const [activeView, setActiveView] = useState('home');
+  const { user } = useUser();
+  const intent = user?.preferences?.intent ?? null;
+
+  const [activeView, setActiveView] = useState(
+    () => intent === 'casino' ? 'casino' : 'home'
+  );
   const [activeSport, setActiveSport] = useState('football');
   const [mobileSlipOpen, setMobileSlipOpen] = useState(false);
   const [myBetsOpen, setMyBetsOpen] = useState(false);
   const [selectedFixture, setSelectedFixture] = useState(null);
   const isMobile = useIsMobile();
   const { logout } = useAuth();
+
+  // When intent changes (after profiling or settings update), redirect to the right home
+  useEffect(() => {
+    if (intent === 'casino') setActiveView('casino');
+  }, [intent]);
 
   // Scroll to top when active view changes
   useEffect(() => {
@@ -1079,14 +1173,17 @@ function AppContent() {
                       />
                     ));
 
-                    // Inject DailyChallengeCard at position 1 and casino CTA at position 3
+                    // Inject DailyChallengeCard at position 1
                     if (cards.length >= 1) {
                       cards.splice(1, 0, <DailyChallengeCard key="daily-challenge" index={0} />);
                     }
-                    if (cards.length >= 4) {
-                      cards.splice(bias === 'casino' ? 0 : cards.length, 0, casinoCta);
-                    } else {
-                      cards.push(casinoCta);
+                    // Inject casino CTA only for users who aren't sports-only
+                    if (intent !== 'sports') {
+                      if (cards.length >= 4) {
+                        cards.splice(bias === 'casino' ? 0 : cards.length, 0, casinoCta);
+                      } else {
+                        cards.push(casinoCta);
+                      }
                     }
 
                     return <SwipeFeed topOffset={totalLiveCount > 0 ? 168 : 136}>{cards}</SwipeFeed>;
@@ -1172,6 +1269,7 @@ function AppContent() {
             onTabChange={handleBottomNavTab}
             betSlipCount={count}
             liveCount={totalLiveCount}
+            intent={intent}
           />
         )}
       </BetSlipCountBridge>
