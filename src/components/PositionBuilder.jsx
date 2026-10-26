@@ -22,14 +22,15 @@
  * PredictaMarket v3 palette: electric indigo accent, deep navy panels.
  */
 
-import { useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
-import { X, Trash2, LayoutGrid, ChevronUp, CheckCircle, AlertCircle, Loader2, Zap } from 'lucide-react';
+import { X, Trash2, LayoutGrid, ChevronUp, Share2, CheckCircle, AlertCircle, Loader2, Zap } from 'lucide-react';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { useUser } from '../context/UserContext.jsx';
 import { useOddsFormat } from '../context/OddsFormatContext.jsx';
 import { formatOdds, formatDecimalOdds } from '../utils/oddsFormatter.js';
 import ConfirmModal from './ConfirmModal.jsx';
+import { encodeSlip } from '../data/friends.js';
 
 const QUICK_STAKES = [5, 10, 25, 50];
 const HIGH_STAKE_THRESHOLD = 20;
@@ -64,6 +65,30 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
   const { user, placeBet } = useUser();
   const { format } = useOddsFormat();
   const sheetDragControls = useDragControls();
+  const [shareNote, setShareNote] = useState(null);
+
+  // Share the slip as a link that opens PUNT with these picks loaded.
+  // Uses the native share sheet where available, otherwise copies the link.
+  async function handleShare() {
+    const url = `${window.location.origin}${window.location.pathname}?slip=${encodeSlip(selections)}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'My PUNT slip', text: `Fancy this ${isAccumulator ? accaLabel.toLowerCase() : 'pick'}?`, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setShareNote('Link copied');
+    } catch (err) {
+      // Dismissing the share sheet throws AbortError — not a failure
+      if (err?.name !== 'AbortError') setShareNote('Couldn’t share');
+    }
+  }
+
+  useEffect(() => {
+    if (!shareNote) return;
+    const t = setTimeout(() => setShareNote(null), 2000);
+    return () => clearTimeout(t);
+  }, [shareNote]);
 
   function setMobileOpen(val) {
     onMobileOpenChange?.(val);
@@ -174,16 +199,27 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
           )}
         </div>
         {hasSelections && status === 'idle' && (
-          <button
-            className="flex items-center gap-1 text-xs transition-colors"
-            style={{ color: '#6B7894' }}
-            onClick={clearAll}
-            onMouseEnter={e => e.currentTarget.style.color = '#FF3366'}
-            onMouseLeave={e => e.currentTarget.style.color = '#6B7894'}
-          >
-            <Trash2 className="w-3 h-3" />
-            Clear all
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleShare}
+              className="flex items-center gap-1 text-xs font-semibold"
+              style={{ color: shareNote ? 'var(--action)' : '#9B8FFF' }}
+            >
+              <Share2 className="w-3 h-3" />
+              {shareNote ?? 'Share'}
+            </button>
+            <button
+              className="flex items-center gap-1 text-xs transition-colors"
+              style={{ color: '#6B7894' }}
+              onClick={clearAll}
+              onMouseEnter={e => e.currentTarget.style.color = '#FF3366'}
+              onMouseLeave={e => e.currentTarget.style.color = '#6B7894'}
+            >
+              <Trash2 className="w-3 h-3" />
+              Clear all
+            </button>
+          </div>
         )}
       </div>
 
@@ -529,9 +565,9 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
             style={
               stakeNum > 0
                 ? {
-                    background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)',
-                    color: '#ffffff',
-                    boxShadow: '0 6px 20px rgba(108,99,255,0.4), 0 0 0 1px rgba(108,99,255,0.3)',
+                    background: 'var(--action)',
+                    color: 'var(--action-ink)',
+                    boxShadow: '0 6px 20px rgba(198,255,61,0.25)',
                   }
                 : {
                     background: 'rgba(255,255,255,0.04)',
@@ -541,10 +577,10 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                   }
             }
             onMouseEnter={e => {
-              if (stakeNum > 0) e.currentTarget.style.boxShadow = '0 8px 28px rgba(108,99,255,0.55), 0 0 0 1px rgba(108,99,255,0.4)';
+              if (stakeNum > 0) e.currentTarget.style.boxShadow = '0 8px 28px rgba(198,255,61,0.4)';
             }}
             onMouseLeave={e => {
-              if (stakeNum > 0) e.currentTarget.style.boxShadow = '0 6px 20px rgba(108,99,255,0.4), 0 0 0 1px rgba(108,99,255,0.3)';
+              if (stakeNum > 0) e.currentTarget.style.boxShadow = '0 6px 20px rgba(198,255,61,0.25)';
             }}
           >
             {stakeNum >= HIGH_STAKE_THRESHOLD
@@ -644,8 +680,8 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                   initial={{ scale: 1.35 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', damping: 12, stiffness: 400 }}
-                  className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-black text-white"
-                  style={{ background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)', boxShadow: '0 0 12px rgba(108,99,255,0.5)' }}
+                  className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-black"
+                  style={{ background: 'var(--action)', color: 'var(--action-ink)', boxShadow: '0 0 12px rgba(198,255,61,0.4)' }}
                 >
                   {selections.length}
                 </motion.span>
@@ -659,7 +695,7 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                   </p>
                 </div>
 
-                <span className="shrink-0 font-mono text-sm font-black" style={{ color: '#B0A5FF' }}>
+                <span className="shrink-0 font-mono text-sm font-black" style={{ color: 'var(--action)' }}>
                   {isAccumulator
                     ? formatDecimalOdds(combinedDecimalOdds, format)
                     : formatOdds(selections[0].probability, format)}

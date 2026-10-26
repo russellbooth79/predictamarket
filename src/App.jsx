@@ -54,6 +54,8 @@ import TennisCard from './components/TennisCard.jsx';
 import FightCard from './components/FightCard.jsx';
 import AmericanSportsCard from './components/AmericanSportsCard.jsx';
 import FootballHome from './components/FootballHome.jsx';
+import { SPORTS } from './data/sports.js';
+import { decodeSlip } from './data/friends.js';
 import OddsFormatToggle from './components/OddsFormatToggle.jsx';
 import PositionBuilder from './components/PositionBuilder.jsx';
 import MyBets, { MyBetsPage } from './components/MyBets.jsx';
@@ -572,7 +574,8 @@ function AppContent() {
   const [myBetsOpen, setMyBetsOpen] = useState(false);
   const [selectedFixture, setSelectedFixture] = useState(null);
   const { logout } = useAuth();
-  const hasSlipSelections = useBetSlip().selections.length > 0;
+  const { selections: slipSelections, loadSelections } = useBetSlip();
+  const hasSlipSelections = slipSelections.length > 0;
   const openBetCount = useUser().bets.filter(b => b.status === 'open').length;
 
   // When intent changes (after profiling or settings update), redirect to the right home
@@ -619,10 +622,37 @@ function AppContent() {
     horseracing: horseRacingOdds.length,
   }), [footballFixturesLive, tennisOdds, boxingOdds, nflOdds, nbaOdds, horseRacingOdds]);
 
-  const availableSports = useMemo(
-    () => Object.keys(fixtureCounts).filter(id => fixtureCounts[id] > 0),
-    [fixtureCounts]
-  );
+  // Favourites from profiling come first, then the rest in the usual order
+  const favouriteSports = user?.preferences?.favouriteSports;
+  const availableSports = useMemo(() => {
+    const favs = favouriteSports ?? [];
+    return SPORTS.map(s => s.id)
+      .filter(id => fixtureCounts[id] > 0)
+      .sort((a, b) => (favs.includes(b) - favs.includes(a)));
+  }, [fixtureCounts, favouriteSports]);
+
+  // Shared slip links (?slip=...) load straight into the bet slip, then the
+  // param is removed so a refresh doesn't reload it
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shared = params.get('slip');
+    if (!shared) return;
+    const picks = decodeSlip(shared, footballFixturesLive);
+    if (picks.length) {
+      loadSelections(picks);
+      setMobileSlipOpen(true);
+    }
+    params.delete('slip');
+    const query = params.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Open home on the user's top favourite sport (once, on first load)
+  useEffect(() => {
+    if (favouriteSports?.length && availableSports[0]) setActiveSport(availableSports[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Live fixtures for current sport (sidebar) ───────────────────────────────
   const sidebarLiveFixtures = useMemo(() => {

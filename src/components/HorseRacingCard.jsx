@@ -247,8 +247,8 @@ export default function HorseRacingCard({ fixture, index = 0 }) {
               style={
                 selected
                   ? {
-                      backgroundColor: 'rgba(91,110,245,0.06)',
-                      borderLeft: `3px solid ${C.primary}`,
+                      backgroundColor: 'rgba(198,255,61,0.06)',
+                      borderLeft: '3px solid var(--action)',
                     }
                   : {
                       borderLeft: '3px solid transparent',

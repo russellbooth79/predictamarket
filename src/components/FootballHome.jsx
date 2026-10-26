@@ -4,10 +4,11 @@
  * Football home feed, replacing the full-screen swipe feed:
  *   1. Big games — a horizontal carousel of full EventCards (live first,
  *      then the most-bet matches)
- *   2. Live now — compact MatchRows
- *   3. Daily challenge
- *   4. Coming up — compact MatchRows
- *   5. Casino link (users who chose casino at signup only; never time-based)
+ *   2. Your mates' accas — copy a friend's acca into the slip
+ *   3. Live now — compact MatchRows
+ *   4. Daily challenge
+ *   5. Coming up — compact MatchRows
+ *   6. Casino link (users who chose casino at signup only; never time-based)
  */
 
 import { useMemo } from 'react';
@@ -15,6 +16,8 @@ import { ChevronRight } from 'lucide-react';
 import EventCard from './EventCard.jsx';
 import MatchRow from './MatchRow.jsx';
 import DailyChallengeCard from './DailyChallengeCard.jsx';
+import FriendAccas from './FriendAccas.jsx';
+import { getFriendAccas } from '../data/friends.js';
 import { getBetCount } from '../utils/fixtureMeta.js';
 
 const BIG_GAMES_COUNT = 3;
@@ -56,6 +59,12 @@ export default function FootballHome({ fixtures, intent, onViewMatch, onOpenCasi
     };
   }, [fixtures]);
 
+  // Mates' accas lean on upcoming matches so there's still time to back them
+  const friendAccas = useMemo(
+    () => getFriendAccas([...fixtures].sort((a, b) => a.isLive - b.isLive)),
+    [fixtures]
+  );
+
   return (
     <div>
       <SectionHeader title="Big games" subtitle="The ones everyone's betting on" />
@@ -67,6 +76,13 @@ export default function FootballHome({ fixtures, intent, onViewMatch, onOpenCasi
           </div>
         ))}
       </div>
+
+      {friendAccas.length > 0 && (
+        <>
+          <SectionHeader title="Your mates' accas" subtitle="Copy one and make it yours" />
+          <FriendAccas accas={friendAccas} />
+        </>
+      )}
 
       {live.length > 0 && (
         <>

@@ -8,7 +8,8 @@ import { motion } from 'framer-motion';
 import { SPORTS } from '../data/sports.js';
 
 export default function SportNav({ activeSport, onSportChange, availableSports }) {
-  const sports = availableSports ? SPORTS.filter(s => availableSports.includes(s.id)) : SPORTS;
+  // Follows availableSports order (favourites first) when given
+  const sports = availableSports ? availableSports.map(id => SPORTS.find(s => s.id === id)) : SPORTS;
 
   return (
     <nav

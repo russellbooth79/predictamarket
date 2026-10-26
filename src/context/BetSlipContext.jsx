@@ -61,6 +61,13 @@ function betSlipReducer(state, action) {
     case 'CLEAR_ALL':
       return { ...initialState };
 
+    // Replace the slip with a ready-made set of selections (copying a mate's
+    // acca or opening a shared slip link). Keeps one outcome per event.
+    case 'LOAD_SELECTIONS': {
+      const byEvent = new Map(action.payload.selections.map((s) => [s.eventId, s]));
+      return { ...initialState, selections: [...byEvent.values()] };
+    }
+
     case 'SET_STAKE':
       return { ...state, stake: action.payload.stake };
 
@@ -118,6 +125,10 @@ export function BetSlipProvider({ children }) {
 
   const clearAll = useCallback(() => {
     dispatch({ type: 'CLEAR_ALL' });
+  }, []);
+
+  const loadSelections = useCallback((selections) => {
+    dispatch({ type: 'LOAD_SELECTIONS', payload: { selections } });
   }, []);
 
   const setStake = useCallback((stake) => {
@@ -192,6 +203,7 @@ export function BetSlipProvider({ children }) {
     addSelection,
     removeSelection,
     clearAll,
+    loadSelections,
     setStake,
     confirm,
     submit,

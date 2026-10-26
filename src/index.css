@@ -93,6 +93,10 @@
    Shared by the nav, the bet slip tray and the swipe feed so they always
    line up, whether or not the browser toolbars are showing. */
 :root {
+  /* Second brand colour: lime marks actions and money moments (picks in the
+     slip, placing a bet), alongside the purple brand colour */
+  --action: #C6FF3D;
+  --action-ink: #0B1200;
   --bottom-nav-h: 64px;
   --bottom-nav-total: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
 }

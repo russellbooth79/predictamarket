@@ -17,7 +17,9 @@ import {
   simpleHash, generateForm, getBetCount, getLiveBettors, getCrowdSplit,
   outcomeShortName, payoutFor, formatKickoff, formatDateLabel,
 } from '../utils/fixtureMeta.js';
+import { getFriendPicks, friendPicksHeadline } from '../data/friends.js';
 import ProbabilityBar from './ProbabilityBar.jsx';
+import FriendAvatars from './FriendAvatars.jsx';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
@@ -59,7 +61,7 @@ function ParticleBurst({ active }) {
           className="absolute rounded-full pointer-events-none"
           style={{
             width: 7, height: 7,
-            background: 'linear-gradient(135deg, #6C63FF, #B06FFF)',
+            background: 'var(--action)',
             left: '50%', top: '50%',
             marginLeft: -3.5, marginTop: -3.5,
           }}
@@ -89,7 +91,7 @@ function OutcomeButton({ outcome, selected, format, onSelect }) {
       aria-pressed={selected}
       className="relative flex flex-col items-center gap-1 px-2 py-3 w-full rounded-xl transition-colors duration-200"
       style={selected
-        ? { background: 'rgba(108,99,255,0.15)', border: '1px solid rgba(108,99,255,0.6)', boxShadow: '0 0 20px rgba(108,99,255,0.2)' }
+        ? { background: 'rgba(198,255,61,0.10)', border: '1px solid var(--action)', boxShadow: '0 0 20px rgba(198,255,61,0.15)' }
         : { background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}` }
       }
     >
@@ -99,14 +101,11 @@ function OutcomeButton({ outcome, selected, format, onSelect }) {
       </span>
       <span
         className="font-mono text-[26px] font-black leading-none"
-        style={selected
-          ? { background: 'linear-gradient(135deg, #6C63FF 0%, #B06FFF 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }
-          : { color: '#E8F0FF' }
-        }
+        style={{ color: selected ? 'var(--action)' : '#E8F0FF' }}
       >
         {formatOdds(outcome.probability, format)}
       </span>
-      <span className="text-[10px] font-medium whitespace-nowrap" style={{ color: selected ? '#B0A5FF' : C.textMuted }}>
+      <span className="text-[10px] font-medium whitespace-nowrap" style={{ color: selected ? 'var(--action)' : C.textMuted }}>
         {secondary}
       </span>
       <div className="w-full mt-0.5">
@@ -182,6 +181,7 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
   const liveBettors = getLiveBettors(fixture.id);
   const accent = TEAM_ACCENTS[simpleHash(fixture.id) % TEAM_ACCENTS.length];
   const anySelected = fixture.outcomes.some(o => isSelected(fixture.id, o.id));
+  const friendPicks = getFriendPicks(fixture);
 
   function handleOutcomeClick(outcome) {
     setBurstId(outcome.id);
@@ -209,8 +209,8 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
         background: `radial-gradient(ellipse 70% 50% at 10% 0%, ${accent}1A 0%, transparent 60%),
                      radial-gradient(ellipse 70% 50% at 90% 0%, ${accent}14 0%, transparent 60%),
                      rgb(12,17,30)`,
-        border: anySelected ? '1px solid rgba(108,99,255,0.5)' : `1px solid ${C.border}`,
-        boxShadow: anySelected ? '0 0 0 1px rgba(108,99,255,0.2), 0 8px 32px rgba(108,99,255,0.12)' : '0 4px 24px rgba(0,0,0,0.3)',
+        border: anySelected ? '1px solid rgba(198,255,61,0.45)' : `1px solid ${C.border}`,
+        boxShadow: anySelected ? '0 8px 32px rgba(198,255,61,0.08)' : '0 4px 24px rgba(0,0,0,0.3)',
         transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
       }}
     >
@@ -281,6 +281,14 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
       </div>
 
       <CrowdBar fixture={fixture} />
+
+      {/* Mates with a bet on this match */}
+      {friendPicks.length > 0 && (
+        <div className="flex items-center gap-2 px-4 pb-3 -mt-1">
+          <FriendAvatars friends={friendPicks.map(p => p.friend)} />
+          <span className="text-[11px] font-semibold" style={{ color: '#C9D3E8' }}>{friendPicksHeadline(friendPicks)}</span>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="mt-auto flex items-center justify-between px-4 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>

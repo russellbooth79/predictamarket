@@ -223,9 +223,9 @@ export default function FightCard({ fixture, index = 0 }) {
               style={
                 selected
                   ? {
-                      background: 'rgba(108,99,255,0.15)',
-                      border: '1px solid rgba(108,99,255,0.6)',
-                      boxShadow: '0 0 20px rgba(108,99,255,0.2)',
+                      background: 'rgba(198,255,61,0.10)',
+                      border: '1px solid var(--action)',
+                      boxShadow: '0 0 20px rgba(198,255,61,0.15)',
                     }
                   : {
                       background: 'rgba(255,255,255,0.03)',
@@ -258,10 +258,7 @@ export default function FightCard({ fixture, index = 0 }) {
                 style={
                   selected
                     ? {
-                        background: 'linear-gradient(135deg, #6C63FF 0%, #B06FFF 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
+                        color: 'var(--action)',
                       }
                     : { color: '#E8F0FF' }
                 }

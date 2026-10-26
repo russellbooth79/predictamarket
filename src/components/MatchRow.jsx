@@ -13,6 +13,8 @@ import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { useOddsFormat } from '../context/OddsFormatContext.jsx';
 import { formatOdds } from '../utils/oddsFormatter.js';
 import { crowdHeadline, formatKickoff, formatDateLabel } from '../utils/fixtureMeta.js';
+import { getFriendPicks, friendPicksHeadline } from '../data/friends.js';
+import FriendAvatars from './FriendAvatars.jsx';
 
 const C = {
   border: 'rgba(255,255,255,0.07)',
@@ -41,6 +43,8 @@ export default function MatchRow({ fixture, onViewMatch, index = 0 }) {
   }
 
   const score = fixture.isLive && fixture.liveScore;
+  // Mates' picks beat the crowd stat when there are any
+  const friendPicks = getFriendPicks(fixture);
 
   return (
     <motion.div
@@ -81,7 +85,10 @@ export default function MatchRow({ fixture, onViewMatch, index = 0 }) {
           </div>
         ))}
         <div className="flex items-center gap-1 mt-1">
-          <span className="text-[11px] truncate" style={{ color: C.textSecondary }}>{crowdHeadline(fixture)}</span>
+          {friendPicks.length > 0 && <FriendAvatars friends={friendPicks.map(p => p.friend)} size={15} />}
+          <span className="text-[11px] truncate" style={{ color: friendPicks.length ? '#C9D3E8' : C.textSecondary }}>
+            {friendPicks.length ? friendPicksHeadline(friendPicks) : crowdHeadline(fixture)}
+          </span>
           <ChevronRight className="w-3 h-3 shrink-0" style={{ color: C.textMuted }} />
         </div>
       </button>
@@ -100,14 +107,14 @@ export default function MatchRow({ fixture, onViewMatch, index = 0 }) {
               aria-label={`${outcome.label} ${formatOdds(outcome.probability, format)}`}
               className="w-[46px] min-[360px]:w-[54px] h-[54px] rounded-xl flex flex-col items-center justify-center gap-0.5 transition-colors duration-150"
               style={selected
-                ? { background: 'rgba(108,99,255,0.2)', border: '1px solid rgba(108,99,255,0.7)', boxShadow: '0 0 14px rgba(108,99,255,0.25)' }
+                ? { background: 'rgba(198,255,61,0.10)', border: '1px solid var(--action)', boxShadow: '0 0 14px rgba(198,255,61,0.15)' }
                 : { background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}` }
               }
             >
-              <span className="text-[9px] uppercase tracking-wider font-semibold" style={{ color: selected ? '#B0A5FF' : C.textMuted }}>
+              <span className="text-[9px] uppercase tracking-wider font-semibold" style={{ color: selected ? 'var(--action)' : C.textMuted }}>
                 {PILL_LABELS[outcome.id] ?? outcome.label}
               </span>
-              <span className="font-mono text-sm font-black" style={{ color: selected ? '#D6D1FF' : C.text }}>
+              <span className="font-mono text-sm font-black" style={{ color: selected ? 'var(--action)' : C.text }}>
                 {formatOdds(outcome.probability, format)}
               </span>
             </motion.button>

@@ -76,7 +76,7 @@ export default function TopBar({ activeSport, onSportChange, onDropdownAction, a
 
       {/* Desktop sport nav */}
       <nav className="hidden lg:flex items-center gap-1 ml-8">
-        {SPORTS.filter(s => !availableSports || availableSports.includes(s.id)).map((sport) => {
+        {(availableSports ? availableSports.map(id => SPORTS.find(s => s.id === id)) : SPORTS).map((sport) => {
           const isActive = activeSport === sport.id;
           return (
             <button

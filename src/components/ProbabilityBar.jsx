@@ -13,7 +13,7 @@ export default function ProbabilityBar({ probability, animated = true, selected 
   }, [probability, animated]);
 
   const gradient = selected
-    ? 'linear-gradient(90deg, #6C63FF 0%, #B06FFF 100%)'
+    ? 'var(--action)'
     : probability >= 60
     ? 'linear-gradient(90deg, #00F5A0 0%, #00D4FF 100%)'
     : probability >= 40
@@ -27,7 +27,7 @@ export default function ProbabilityBar({ probability, animated = true, selected 
         style={{
           width: `${width}%`,
           background: gradient,
-          boxShadow: selected ? '0 0 6px rgba(108,99,255,0.5)' : 'none',
+          boxShadow: selected ? '0 0 6px rgba(198,255,61,0.5)' : 'none',
         }}
       />
     </div>
