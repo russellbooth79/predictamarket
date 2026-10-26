@@ -24,7 +24,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
-import { X, Trash2, LayoutGrid, ChevronUp, Share2, CheckCircle, AlertCircle, Loader2, Zap } from 'lucide-react';
+import { X, Trash2, LayoutGrid, ChevronUp, Share2, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { useUser } from '../context/UserContext.jsx';
 import { useOddsFormat } from '../context/OddsFormatContext.jsx';
@@ -340,13 +340,14 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                     backgroundClip: 'text',
                   }}
                 >
-                  {formatOdds(combinedProbability, format)}
+                  {formatDecimalOdds(combinedDecimalOdds, format)}
                 </span>
               </div>
+              {/* One combined figure (matches the tray), translated into money */}
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs" style={{ color: '#6B7894' }}>Combined Odds</span>
-                <span className="font-mono text-sm font-bold" style={{ color: '#9B8FFF' }}>
-                  {formatDecimalOdds(combinedDecimalOdds, format)}
+                <span className="text-xs" style={{ color: '#6B7894' }}>£10 returns</span>
+                <span className="font-mono text-sm font-bold" style={{ color: 'var(--action)' }}>
+                  £{(10 * combinedDecimalOdds).toFixed(2)}
                 </span>
               </div>
               <div className="flex items-center flex-wrap gap-1">
@@ -377,14 +378,6 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                 >
                   Accas over {MAX_RECOMMENDED_LEGS} legs carry significantly higher risk.
                   Combined probability: {combinedProbability.toFixed(1)}%.
-                </div>
-              )}
-              {selections.length >= 3 && (
-                <div className="mt-3 flex items-center gap-2">
-                  <Zap className="w-3.5 h-3.5" style={{ color: '#6C63FF' }} />
-                  <span className="text-[10px] font-semibold" style={{ color: '#9B8FFF' }}>
-                    Boost your Acca — enhanced odds available
-                  </span>
                 </div>
               )}
             </div>
