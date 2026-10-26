@@ -586,7 +586,7 @@ function HorseRacingEmpty() {
 // casino → Casino on left, Account on right, no slip (casino has no bet slip)
 // both / null → Home + Live on left, Casino + Account on right, slip centre
 
-function MobileBottomNav({ activeTab, onTabChange, betSlipCount, liveCount, intent }) {
+function MobileBottomNav({ activeTab, onTabChange, liveCount, intent }) {
   const isCasinoOnly = intent === 'casino';
 
   const leftTabs = isCasinoOnly
@@ -601,7 +601,7 @@ function MobileBottomNav({ activeTab, onTabChange, betSlipCount, liveCount, inte
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-end justify-around px-2"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2"
       style={{
         background: 'rgba(5,8,15,0.97)',
         backdropFilter: 'blur(20px)',
@@ -653,38 +653,6 @@ function MobileBottomNav({ activeTab, onTabChange, betSlipCount, liveCount, inte
         );
       })}
 
-      {/* Centre raised Bet Slip — hidden for casino-only (no slip workflow) */}
-      {!isCasinoOnly ? (
-        <div className="flex flex-col items-center relative" style={{ marginBottom: '10px' }}>
-          <button
-            onClick={() => onTabChange('betslip')}
-            className="w-16 h-16 rounded-full flex items-center justify-center relative"
-            style={{
-              background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)',
-              boxShadow: activeTab === 'betslip'
-                ? '0 0 0 3px rgba(108,99,255,0.3), 0 8px 24px rgba(108,99,255,0.5)'
-                : '0 4px 20px rgba(108,99,255,0.4)',
-              border: '3px solid rgba(5,8,15,0.97)',
-            }}
-          >
-            <LayoutGrid className="w-6 h-6 text-white" />
-            {betSlipCount > 0 && (
-              <span
-                className="absolute -top-1 -right-1 min-w-[20px] h-5 rounded-full text-[10px] font-black flex items-center justify-center px-1.5 text-white"
-                style={{ background: 'linear-gradient(135deg, #FF3366, #FF6B35)' }}
-              >
-                {betSlipCount > 9 ? '9+' : betSlipCount}
-              </span>
-            )}
-          </button>
-          <span className="text-[10px] font-semibold mt-0.5" style={{ color: activeTab === 'betslip' ? '#9B8FFF' : '#3A4560' }}>
-            Slip
-          </span>
-        </div>
-      ) : (
-        <div className="flex-1" />
-      )}
-
       {/* Right tabs */}
       {rightTabs.map(tab => {
         const { Icon } = tab;
@@ -720,13 +688,6 @@ function MobileBottomNav({ activeTab, onTabChange, betSlipCount, liveCount, inte
   );
 }
 
-// ── Bet Slip Count Bridge ─────────────────────────────────────────────────────
-
-function BetSlipCountBridge({ children }) {
-  const { selections } = useBetSlip();
-  return children(selections.length);
-}
-
 // ── Main App ──────────────────────────────────────────────────────────────────
 
 // ── View transition variants ─────────────────────────────────────────────────
@@ -755,6 +716,7 @@ function AppContent() {
   const [selectedFixture, setSelectedFixture] = useState(null);
   const isMobile = useIsMobile();
   const { logout } = useAuth();
+  const hasSlipSelections = useBetSlip().selections.length > 0;
 
   // When intent changes (after profiling or settings update), redirect to the right home
   useEffect(() => {
@@ -827,10 +789,6 @@ function AppContent() {
   }
 
   function handleBottomNavTab(tabId) {
-    if (tabId === 'betslip') {
-      setMobileSlipOpen(true);
-      return;
-    }
     setMobileSlipOpen(false);
     setActiveView(tabId);
     if (tabId === 'home') setSelectedFixture(null);
@@ -843,9 +801,6 @@ function AppContent() {
     setActiveView('home');
     setSelectedFixture(null);
   }
-
-  // Active tab for bottom nav: betslip when slip is open, else activeView
-  const activeBottomTab = mobileSlipOpen ? 'betslip' : activeView;
 
   // Key for the main view transition — changes on tab, sport, or match detail
   const showMatchDetail = activeView === 'home' && activeSport === 'football' && selectedFixture;
@@ -1295,8 +1250,8 @@ function AppContent() {
           </motion.div>
           </AnimatePresence>
 
-          {/* Bottom spacer for mobile bottom nav */}
-          <div className="h-24 lg:h-0" />
+          {/* Bottom spacer for mobile bottom nav (+ bet slip tray when showing) */}
+          <div className={`${hasSlipSelections ? 'h-40' : 'h-24'} lg:h-0`} />
         </div>
       </main>
 
@@ -1310,17 +1265,12 @@ function AppContent() {
       <MyBets isOpen={myBetsOpen} onClose={() => setMyBetsOpen(false)} />
 
       {/* ── Mobile Bottom Nav ───────────────────────────────────────────────── */}
-      <BetSlipCountBridge>
-        {count => (
-          <MobileBottomNav
-            activeTab={activeBottomTab}
-            onTabChange={handleBottomNavTab}
-            betSlipCount={count}
-            liveCount={totalLiveCount}
-            intent={intent}
-          />
-        )}
-      </BetSlipCountBridge>
+      <MobileBottomNav
+        activeTab={activeView}
+        onTabChange={handleBottomNavTab}
+        liveCount={totalLiveCount}
+        intent={intent}
+      />
     </div>
   );
 }

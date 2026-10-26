@@ -9,12 +9,16 @@
 
 import { useRef } from 'react';
 import { useIsMobile } from '../hooks/useIsMobile.js';
+import { useBetSlip } from '../context/BetSlipContext.jsx';
+import { MOBILE_TRAY_H } from './PositionBuilder.jsx';
 
 const BOTTOM_NAV_H = 64; // px — must match MobileBottomNav height in App.jsx
 
 export default function SwipeFeed({ children, topOffset = 136 }) {
   const isMobile = useIsMobile();
   const containerRef = useRef(null);
+  // Leave room for the bet slip tray when it's showing
+  const trayH = useBetSlip().selections.length > 0 ? MOBILE_TRAY_H : 0;
 
   if (!isMobile) {
     // Desktop: plain list, children render at natural height
@@ -29,7 +33,8 @@ export default function SwipeFeed({ children, topOffset = 136 }) {
       style={{
         position: 'fixed',
         top: topOffset,
-        bottom: `calc(${BOTTOM_NAV_H}px + env(safe-area-inset-bottom, 0px))`,
+        bottom: `calc(${BOTTOM_NAV_H + trayH}px + env(safe-area-inset-bottom, 0px))`,
+        transition: 'bottom 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
         left: 0,
         right: 0,
         overflowY: 'scroll',

@@ -1,7 +1,11 @@
 /**
  * PositionBuilder.jsx
  *
- * Right-panel bet slip (desktop) / bottom sheet (mobile).
+ * Right-panel bet slip (desktop) / tray + bottom sheet (mobile).
+ *
+ * Mobile: a collapsed tray slides up above the bottom nav as soon as the
+ * first selection is added. Tapping or swiping it up expands the full sheet;
+ * the sheet can be dragged down by its handle to collapse back to the tray.
  *
  * Orchestrates the full betting flow:
  * 1. User adds selections from event cards
@@ -19,8 +23,8 @@
  */
 
 import { useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trash2, LayoutGrid, CheckCircle, AlertCircle, Loader2, Zap } from 'lucide-react';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { X, Trash2, LayoutGrid, ChevronUp, CheckCircle, AlertCircle, Loader2, Zap } from 'lucide-react';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { useUser } from '../context/UserContext.jsx';
 import { useOddsFormat } from '../context/OddsFormatContext.jsx';
@@ -31,6 +35,10 @@ const QUICK_STAKES = [5, 10, 25, 50];
 const HIGH_STAKE_THRESHOLD = 20;
 const SUCCESS_DISPLAY_MS = 2500;
 const MAX_RECOMMENDED_LEGS = 6;
+
+// Mobile tray height — SwipeFeed reads this to keep cards clear of the tray
+export const MOBILE_TRAY_H = 60;
+const BOTTOM_NAV_H = 64; // must match MobileBottomNav height in App.jsx
 
 export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange }) {
   const {
@@ -56,6 +64,7 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
 
   const { user, placeBet } = useUser();
   const { format } = useOddsFormat();
+  const sheetDragControls = useDragControls();
 
   function setMobileOpen(val) {
     onMobileOpenChange?.(val);
@@ -591,29 +600,76 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
         {panelContent}
       </aside>
 
-      {/* Mobile FAB + bottom sheet */}
+      {/* Mobile tray + bottom sheet */}
       <div className="lg:hidden">
-        {hasSelections && !mobileOpen && (
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="fixed right-6 z-[60] w-14 h-14 rounded-full text-white flex items-center justify-center"
-            style={{
-              bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))',
-              background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)',
-              boxShadow: '0 6px 20px rgba(108,99,255,0.5)',
-            }}
-          >
-            <div className="relative">
-              <LayoutGrid className="w-6 h-6" />
-              <span
-                className="absolute -top-2 -right-2 w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center text-white"
-                style={{ background: 'linear-gradient(135deg, #FF3366, #FF6B35)' }}
+        <AnimatePresence>
+          {hasSelections && (
+            <motion.div
+              key="slip-tray"
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.25, bottom: 0 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y < -24 || info.velocity.y < -300) setMobileOpen(true);
+              }}
+              className="fixed left-0 right-0 z-40 px-3"
+              style={{ bottom: BOTTOM_NAV_H, height: MOBILE_TRAY_H, touchAction: 'none' }}
+            >
+              <button
+                type="button"
+                onClick={() => setMobileOpen(true)}
+                aria-label="Open bet slip"
+                className="relative w-full h-full flex items-center gap-3 px-4 rounded-t-2xl text-left"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(30,26,70,0.98) 0%, rgba(14,16,34,0.98) 100%)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(108,99,255,0.35)',
+                  borderBottom: 'none',
+                  boxShadow: '0 -8px 30px rgba(108,99,255,0.25)',
+                }}
               >
-                {selections.length}
-              </span>
-            </div>
-          </button>
-        )}
+                {/* Grab handle */}
+                <span
+                  className="absolute top-1.5 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full"
+                  style={{ background: 'rgba(255,255,255,0.18)' }}
+                />
+
+                {/* Count — pops each time a selection is added or removed */}
+                <motion.span
+                  key={selections.length}
+                  initial={{ scale: 1.35 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', damping: 12, stiffness: 400 }}
+                  className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-black text-white"
+                  style={{ background: 'linear-gradient(135deg, #6C63FF 0%, #9B5DE5 100%)', boxShadow: '0 0 12px rgba(108,99,255,0.5)' }}
+                >
+                  {selections.length}
+                </motion.span>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black font-display truncate" style={{ color: '#F0F6FF' }}>
+                    {isAccumulator ? accaLabel : selections[0].outcomeName}
+                  </p>
+                  <p className="text-xs truncate" style={{ color: '#7B8CAA' }}>
+                    {isAccumulator ? `${selections.length} selections` : selections[0].eventName}
+                  </p>
+                </div>
+
+                <span className="shrink-0 font-mono text-sm font-black" style={{ color: '#B0A5FF' }}>
+                  {isAccumulator
+                    ? formatDecimalOdds(combinedDecimalOdds, format)
+                    : formatOdds(selections[0].probability, format)}
+                </span>
+                <ChevronUp className="shrink-0 w-5 h-5" style={{ color: '#7B8CAA' }} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {mobileOpen && (
@@ -631,6 +687,14 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                drag="y"
+                dragListener={false}
+                dragControls={sheetDragControls}
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0, bottom: 1 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 100 || info.velocity.y > 500) setMobileOpen(false);
+                }}
                 className="fixed bottom-0 left-0 right-0 z-[80] rounded-t-3xl max-h-[85vh] flex flex-col"
                 style={{
                   background: 'rgba(8,12,20,0.97)',
@@ -640,7 +704,12 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                   boxShadow: '0 -20px 60px rgba(108,99,255,0.15)',
                 }}
               >
-                <div className="flex justify-center py-3">
+                {/* Drag handle — pull down to collapse back to the tray */}
+                <div
+                  className="flex justify-center py-3 cursor-grab"
+                  style={{ touchAction: 'none' }}
+                  onPointerDown={e => sheetDragControls.start(e)}
+                >
                   <div
                     className="w-10 h-1 rounded-full"
                     style={{ background: 'rgba(255,255,255,0.15)' }}
