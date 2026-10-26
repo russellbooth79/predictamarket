@@ -38,7 +38,6 @@ const MAX_RECOMMENDED_LEGS = 6;
 
 // Mobile tray height — SwipeFeed reads this to keep cards clear of the tray
 export const MOBILE_TRAY_H = 60;
-const BOTTOM_NAV_H = 64; // must match MobileBottomNav height in App.jsx
 
 export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange }) {
   const {
@@ -617,7 +616,7 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                 if (info.offset.y < -24 || info.velocity.y < -300) setMobileOpen(true);
               }}
               className="fixed left-0 right-0 z-40 px-3"
-              style={{ bottom: BOTTOM_NAV_H, height: MOBILE_TRAY_H, touchAction: 'none' }}
+              style={{ bottom: 'var(--bottom-nav-total)', height: MOBILE_TRAY_H, touchAction: 'none' }}
             >
               <button
                 type="button"
@@ -702,6 +701,7 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                   WebkitBackdropFilter: 'blur(24px)',
                   borderTop: '1px solid rgba(108,99,255,0.25)',
                   boxShadow: '0 -20px 60px rgba(108,99,255,0.15)',
+                  paddingBottom: 'env(safe-area-inset-bottom, 0px)',
                 }}
               >
                 {/* Drag handle — pull down to collapse back to the tray */}

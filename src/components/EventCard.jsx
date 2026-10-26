@@ -133,7 +133,7 @@ function SwipeableOutcomeButton({ outcome, selected, formattedOdds, onSelect, he
     ? { background: 'rgba(108,99,255,0.15)', border: '1px solid rgba(108,99,255,0.6)', boxShadow: '0 0 20px rgba(108,99,255,0.2)' }
     : { background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}` };
 
-  const oddsSize = hero ? 'text-[40px]' : 'text-[28px]';
+  const oddsSize = hero ? 'text-[40px] [@media(max-height:600px)]:text-[28px]' : 'text-[28px]';
 
   return (
     <div className="relative overflow-hidden rounded-xl">
@@ -151,7 +151,7 @@ function SwipeableOutcomeButton({ outcome, selected, formattedOdds, onSelect, he
         style={{ x, ...buttonStyle }}
         onDragEnd={handleDragEnd}
         onClick={() => !selected && onSelect()}
-        className={`relative flex flex-col items-center gap-1 p-3 w-full rounded-xl touch-pan-y ${hero ? 'py-4' : ''}`}
+        className={`relative flex flex-col items-center gap-1 p-3 w-full rounded-xl touch-pan-y ${hero ? 'py-4 [@media(max-height:740px)]:py-2' : ''}`}
       >
         <span className="text-[10px] uppercase tracking-widest font-medium" style={{ color: C.textSecondary }}>
           {outcome.label}
@@ -180,12 +180,12 @@ function DesktopOutcomeButton({ outcome, selected, formattedOdds, onSelect, hero
     ? { background: 'rgba(108,99,255,0.15)', border: '1px solid rgba(108,99,255,0.6)', boxShadow: '0 0 20px rgba(108,99,255,0.2)' }
     : { background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}` };
 
-  const oddsSize = hero ? 'text-[40px]' : 'text-[28px]';
+  const oddsSize = hero ? 'text-[40px] [@media(max-height:600px)]:text-[28px]' : 'text-[28px]';
 
   return (
     <button
       onClick={onSelect}
-      className={`relative flex flex-col items-center gap-1 p-3 rounded-xl transition-all duration-200 cursor-pointer overflow-hidden ${hero ? 'py-4' : ''}`}
+      className={`relative flex flex-col items-center gap-1 p-3 rounded-xl transition-all duration-200 cursor-pointer overflow-hidden ${hero ? 'py-4 [@media(max-height:740px)]:py-2' : ''}`}
       style={buttonStyle}
       onMouseEnter={e => {
         if (!selected) {
@@ -312,12 +312,13 @@ export default function EventCard({ fixture, index = 0, onViewMatch, hero = fals
         </div>
 
         {/* Team colour zone — flex-1 so it fills the middle */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-4 min-h-0">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-4 [@media(max-height:740px)]:py-2 min-h-0">
           <div className="w-full flex items-center justify-between gap-4">
             {/* Home */}
             <div className="flex-1 flex flex-col items-center gap-2">
+              {/* Crest tiles drop out on short screens (e.g. browser toolbars + slip tray showing) */}
               <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black"
+                className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black [@media(max-height:740px)]:hidden"
                 style={{ background: `${homeAccent}22`, border: `2px solid ${homeAccent}44`, color: homeAccent }}
               >
                 {fixture.homeTeam.split(' ').map(w => w[0]).slice(0, 2).join('')}
@@ -325,7 +326,7 @@ export default function EventCard({ fixture, index = 0, onViewMatch, hero = fals
               <span className="text-lg font-black font-display text-center leading-tight" style={{ color: C.text }}>
                 {fixture.homeTeam}
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 [@media(max-height:600px)]:hidden">
                 {homeForm.map((r, i) => <FormDot key={i} result={r} />)}
               </div>
             </div>
@@ -334,11 +335,11 @@ export default function EventCard({ fixture, index = 0, onViewMatch, hero = fals
             {fixture.isLive && fixture.liveScore ? (
               <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-5xl font-black" style={{ background: 'linear-gradient(135deg, #6C63FF, #9B5DE5)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                  <span className="font-mono text-5xl [@media(max-height:600px)]:text-4xl font-black" style={{ background: 'linear-gradient(135deg, #6C63FF, #9B5DE5)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
                     {fixture.liveScore.home}
                   </span>
                   <span className="text-2xl" style={{ color: C.textMuted }}>–</span>
-                  <span className="font-mono text-5xl font-black" style={{ background: 'linear-gradient(135deg, #6C63FF, #9B5DE5)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                  <span className="font-mono text-5xl [@media(max-height:600px)]:text-4xl font-black" style={{ background: 'linear-gradient(135deg, #6C63FF, #9B5DE5)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
                     {fixture.liveScore.away}
                   </span>
                 </div>
@@ -353,7 +354,7 @@ export default function EventCard({ fixture, index = 0, onViewMatch, hero = fals
             {/* Away */}
             <div className="flex-1 flex flex-col items-center gap-2">
               <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black"
+                className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black [@media(max-height:740px)]:hidden"
                 style={{ background: `${awayAccent}22`, border: `2px solid ${awayAccent}44`, color: awayAccent }}
               >
                 {fixture.awayTeam.split(' ').map(w => w[0]).slice(0, 2).join('')}
@@ -361,7 +362,7 @@ export default function EventCard({ fixture, index = 0, onViewMatch, hero = fals
               <span className="text-lg font-black font-display text-center leading-tight" style={{ color: C.text }}>
                 {fixture.awayTeam}
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 [@media(max-height:600px)]:hidden">
                 {awayForm.map((r, i) => <FormDot key={i} result={r} />)}
               </div>
             </div>

@@ -607,8 +607,9 @@ function MobileBottomNav({ activeTab, onTabChange, liveCount, intent }) {
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         borderTop: '1px solid rgba(255,255,255,0.07)',
-        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
-        height: '64px',
+        // Tabs fill the top 64px; the home-indicator area below stays clear
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        height: 'var(--bottom-nav-total)',
       }}
     >
       {/* Left tabs */}
@@ -1251,7 +1252,10 @@ function AppContent() {
           </AnimatePresence>
 
           {/* Bottom spacer for mobile bottom nav (+ bet slip tray when showing) */}
-          <div className={`${hasSlipSelections ? 'h-40' : 'h-24'} lg:h-0`} />
+          <div
+            className="lg:hidden"
+            style={{ height: `calc(${hasSlipSelections ? 160 : 96}px + env(safe-area-inset-bottom, 0px))` }}
+          />
         </div>
       </main>
 

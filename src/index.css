@@ -89,6 +89,14 @@
 
 * { box-sizing: border-box; }
 
+/* Mobile bottom nav: 64px of tabs plus the iPhone home-indicator area.
+   Shared by the nav, the bet slip tray and the swipe feed so they always
+   line up, whether or not the browser toolbars are showing. */
+:root {
+  --bottom-nav-h: 64px;
+  --bottom-nav-total: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
+}
+
 html, body, #root {
   height: 100%;
   margin: 0;
