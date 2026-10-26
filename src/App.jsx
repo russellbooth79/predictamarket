@@ -25,6 +25,7 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { OddsFormatProvider } from './context/OddsFormatContext.jsx';
 import { BetSlipProvider, useBetSlip } from './context/BetSlipContext.jsx';
 import { UserProvider, useUser } from './context/UserContext.jsx';
@@ -620,9 +621,17 @@ function MobileBottomNav({ activeTab, onTabChange, betSlipCount, liveCount, inte
             onClick={() => onTabChange(tab.id)}
             className="flex flex-col items-center gap-0.5 py-2 px-4 relative flex-1 active:opacity-60"
           >
+            {isActive && (
+              <motion.span
+                layoutId="bottom-nav-indicator"
+                className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full"
+                style={{ background: 'linear-gradient(90deg, #6C63FF, #B06FFF)', boxShadow: '0 0 8px rgba(108,99,255,0.8)' }}
+                transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+              />
+            )}
             <div className="relative">
               <Icon
-                className="w-5 h-5"
+                className="w-5 h-5 transition-colors duration-200"
                 style={{
                   color: isActive ? '#9B8FFF' : '#3A4560',
                   filter: isActive ? 'drop-shadow(0 0 6px rgba(108,99,255,0.6))' : 'none',
@@ -684,10 +693,18 @@ function MobileBottomNav({ activeTab, onTabChange, betSlipCount, liveCount, inte
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className="flex flex-col items-center gap-0.5 py-2 px-4 flex-1"
+            className="flex flex-col items-center gap-0.5 py-2 px-4 relative flex-1 active:opacity-60"
           >
+            {isActive && (
+              <motion.span
+                layoutId="bottom-nav-indicator"
+                className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full"
+                style={{ background: 'linear-gradient(90deg, #6C63FF, #B06FFF)', boxShadow: '0 0 8px rgba(108,99,255,0.8)' }}
+                transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+              />
+            )}
             <Icon
-              className="w-5 h-5"
+              className="w-5 h-5 transition-colors duration-200"
               style={{
                 color: isActive ? '#9B8FFF' : '#3A4560',
                 filter: isActive ? 'drop-shadow(0 0 6px rgba(108,99,255,0.6))' : 'none',
@@ -712,6 +729,19 @@ function BetSlipCountBridge({ children }) {
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 
+// ── View transition variants ─────────────────────────────────────────────────
+// Views fade and rise slightly on enter. `slide` is false when the view hosts
+// position:fixed content (the mobile SwipeFeed) — a transform on an ancestor
+// would make that content position relative to the wrapper mid-animation, so
+// those views crossfade with opacity only. Exit is always opacity-only, since
+// the outgoing view may be the one hosting fixed content.
+
+const viewVariants = {
+  enter: (slide) => ({ opacity: 0, y: slide ? 10 : 0 }),
+  center: { opacity: 1, y: 0, transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] } },
+  exit: { opacity: 0, transition: { duration: 0.12, ease: 'easeIn' } },
+};
+
 function AppContent() {
   const { user } = useUser();
   const intent = user?.preferences?.intent ?? null;
@@ -731,10 +761,6 @@ function AppContent() {
     if (intent === 'casino') setActiveView('casino');
   }, [intent]);
 
-  // Scroll to top when active view changes
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [activeView]);
 
   // ── Data hooks ──────────────────────────────────────────────────────────────
   const {
@@ -820,6 +846,11 @@ function AppContent() {
 
   // Active tab for bottom nav: betslip when slip is open, else activeView
   const activeBottomTab = mobileSlipOpen ? 'betslip' : activeView;
+
+  // Key for the main view transition — changes on tab, sport, or match detail
+  const showMatchDetail = activeView === 'home' && activeSport === 'football' && selectedFixture;
+  const viewKey = showMatchDetail ? `match-${selectedFixture.id}` : activeView === 'home' ? `home-${activeSport}` : activeView;
+  const viewHasFixedFeed = isMobile && activeView === 'home' && activeSport === 'football' && !selectedFixture;
 
   // ── Section subtitle for home view ──────────────────────────────────────────
   function getFixtureSubtitle() {
@@ -1048,6 +1079,20 @@ function AppContent() {
         {activeView === 'home' && <div className="lg:hidden h-12" />}
 
         <div className="p-4 lg:p-6 max-w-3xl mx-auto">
+          {/* Scroll to top once the outgoing view has faded, so it doesn't visibly jump */}
+          <AnimatePresence
+            mode="wait"
+            initial={false}
+            onExitComplete={() => window.scrollTo({ top: 0, behavior: 'instant' })}
+          >
+          <motion.div
+            key={viewKey}
+            custom={!viewHasFixedFeed}
+            variants={viewVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+          >
 
           {/* ── LIVE VIEW ─────────────────────────────────────────────────── */}
           {activeView === 'live' && (
@@ -1081,7 +1126,7 @@ function AppContent() {
           {activeView === 'home' && (
             <>
               {/* Match detail view when a fixture is selected */}
-              {activeSport === 'football' && selectedFixture ? (
+              {showMatchDetail ? (
                 <MatchDetailView
                   fixture={selectedFixture}
                   detail={selectedDetail}
@@ -1247,6 +1292,9 @@ function AppContent() {
             </>
           )}
 
+          </motion.div>
+          </AnimatePresence>
+
           {/* Bottom spacer for mobile bottom nav */}
           <div className="h-24 lg:h-0" />
         </div>
@@ -1287,6 +1335,7 @@ function AppContent() {
 
 function App() {
   return (
+    <MotionConfig reducedMotion="user">
     <AuthProvider>
       <OddsFormatProvider>
         <BetSlipProvider>
@@ -1300,6 +1349,7 @@ function App() {
         </BetSlipProvider>
       </OddsFormatProvider>
     </AuthProvider>
+    </MotionConfig>
   );
 }
 

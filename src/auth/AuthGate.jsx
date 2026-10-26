@@ -16,6 +16,7 @@
  * AuthGate only decides what to render — it does not manage user data.
  */
 
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext.jsx';
 import LandingScreen from './LandingScreen.jsx';
 import SignupFlow from './SignupFlow.jsx';
@@ -29,9 +30,10 @@ import PlayerProfiling from './PlayerProfiling.jsx';
 
 function AppLoadingScreen() {
   return (
-    <div
+    <motion.div
       className="fixed inset-0 flex items-center justify-center"
       style={{ backgroundColor: '#05080F', zIndex: 200 }}
+      exit={{ opacity: 0, transition: { duration: 0.25 } }}
     >
       <div className="flex flex-col items-center gap-4">
         {/* Spinning gradient ring */}
@@ -47,21 +49,39 @@ function AppLoadingScreen() {
           PUNT
         </span>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 export default function AuthGate({ children }) {
   const { isAuthenticated, loading, authModal, profilingOpen } = useAuth();
 
-  if (loading) {
-    return <AppLoadingScreen />;
-  }
-
   return (
     <>
-      {/* Main content — either the landing screen or the authenticated app */}
-      {isAuthenticated ? children : <LandingScreen />}
+      {/* Loading screen fades out once the session has hydrated */}
+      <AnimatePresence>
+        {loading && <AppLoadingScreen key="loading" />}
+      </AnimatePresence>
+
+      {/* Main content — either the landing screen or the authenticated app.
+          The app wrapper animates opacity only: a transform would break the
+          app's position:fixed chrome (top bar, bottom nav, swipe feed). */}
+      {!loading && (
+        <AnimatePresence initial={false}>
+          {isAuthenticated ? (
+            <motion.div
+              key="app"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, transition: { duration: 0.35, ease: 'easeOut' } }}
+              exit={{ opacity: 0, transition: { duration: 0.2 } }}
+            >
+              {children}
+            </motion.div>
+          ) : (
+            <LandingScreen key="landing" />
+          )}
+        </AnimatePresence>
+      )}
 
       {/* Auth overlays — always mounted so AnimatePresence manages transitions */}
       <SignupFlow isOpen={authModal === 'signup'} />

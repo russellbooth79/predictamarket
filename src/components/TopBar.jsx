@@ -4,6 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Bell, ChevronDown, User, History, ShieldCheck, LogOut } from 'lucide-react';
 import { useUser } from '../context/UserContext.jsx';
 import OddsFormatToggle from './OddsFormatToggle.jsx';
@@ -90,18 +91,10 @@ export default function TopBar({ activeSport, onSportChange, onDropdownAction })
               key={sport.id}
               onClick={() => onSportChange(sport.id)}
               className="relative px-3 py-1.5 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-1.5"
-              style={
-                isActive
-                  ? {
-                      background: 'linear-gradient(135deg, rgba(108,99,255,0.2) 0%, rgba(176,111,255,0.15) 100%)',
-                      color: '#B0A5FF',
-                      border: '1px solid rgba(108,99,255,0.35)',
-                    }
-                  : {
-                      color: '#7B8CAA',
-                      border: '1px solid transparent',
-                    }
-              }
+              style={{
+                color: isActive ? '#B0A5FF' : '#7B8CAA',
+                border: '1px solid transparent',
+              }}
               onMouseEnter={e => {
                 if (!isActive) {
                   e.currentTarget.style.color = '#F0F6FF';
@@ -115,8 +108,20 @@ export default function TopBar({ activeSport, onSportChange, onDropdownAction })
                 }
               }}
             >
-              <span>{sport.icon}</span>
-              <span>{sport.label}</span>
+              {/* Active pill slides between tabs via shared layout animation */}
+              {isActive && (
+                <motion.span
+                  layoutId="topbar-sport-pill"
+                  className="absolute inset-0 rounded-xl"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(108,99,255,0.2) 0%, rgba(176,111,255,0.15) 100%)',
+                    border: '1px solid rgba(108,99,255,0.35)',
+                  }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+                />
+              )}
+              <span className="relative">{sport.icon}</span>
+              <span className="relative">{sport.label}</span>
             </button>
           );
         })}

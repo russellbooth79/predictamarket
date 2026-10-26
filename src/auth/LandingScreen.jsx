@@ -9,18 +9,30 @@
  * All CTA buttons dispatch to AuthContext (openSignup / openLogin).
  */
 
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext.jsx';
+
+// Staggered entrance: each block fades and rises in sequence
+const container = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
+};
+const item = {
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
+};
 
 export default function LandingScreen() {
   const { openSignup, openLogin, skipSignup } = useAuth();
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 flex flex-col items-center justify-center px-6 overflow-hidden"
       style={{
         zIndex: 100,
         backgroundColor: '#05080F',
       }}
+      exit={{ opacity: 0, transition: { duration: 0.25 } }}
     >
       {/* Background ambient glow */}
       <div
@@ -30,10 +42,15 @@ export default function LandingScreen() {
         }}
       />
 
-      <div className="relative w-full max-w-sm flex flex-col items-center">
+      <motion.div
+        className="relative w-full max-w-sm flex flex-col items-center"
+        variants={container}
+        initial="hidden"
+        animate="visible"
+      >
 
         {/* PUNT wordmark */}
-        <div className="mb-3 text-center">
+        <motion.div variants={item} className="mb-3 text-center">
           <h1
             className="font-black tracking-tight"
             style={{ fontSize: '42px', color: '#F0F6FF', lineHeight: 1 }}
@@ -48,15 +65,15 @@ export default function LandingScreen() {
               background: 'linear-gradient(90deg, #6C63FF, #B06FFF)',
             }}
           />
-        </div>
+        </motion.div>
 
         {/* Sub-headline */}
-        <p className="text-base mb-12 text-center" style={{ color: '#7B8CAA', fontSize: '16px' }}>
+        <motion.p variants={item} className="text-base mb-12 text-center" style={{ color: '#7B8CAA', fontSize: '16px' }}>
           Join in under 90 seconds
-        </p>
+        </motion.p>
 
         {/* SSO buttons */}
-        <div className="w-full flex flex-col gap-3 mb-5">
+        <motion.div variants={item} className="w-full flex flex-col gap-3 mb-5">
           <button
             type="button"
             onClick={openSignup}
@@ -90,17 +107,18 @@ export default function LandingScreen() {
             </svg>
             <span>Continue with Google</span>
           </button>
-        </div>
+        </motion.div>
 
         {/* Divider */}
-        <div className="flex items-center gap-3 w-full mb-5">
+        <motion.div variants={item} className="flex items-center gap-3 w-full mb-5">
           <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
           <span className="text-xs" style={{ color: '#7B8CAA' }}>or use your mobile number</span>
           <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
-        </div>
+        </motion.div>
 
         {/* Phone CTA */}
-        <button
+        <motion.button
+          variants={item}
           type="button"
           onClick={openSignup}
           className="w-full flex items-center justify-center rounded-xl font-semibold text-base transition-opacity active:opacity-80 mb-8"
@@ -112,16 +130,16 @@ export default function LandingScreen() {
           }}
         >
           Continue with phone
-        </button>
+        </motion.button>
 
         {/* Legal micro-copy */}
-        <p className="text-xs text-center leading-relaxed mb-8" style={{ color: '#7B8CAA', fontSize: '12px' }}>
+        <motion.p variants={item} className="text-xs text-center leading-relaxed mb-8" style={{ color: '#7B8CAA', fontSize: '12px' }}>
           18+ only. By continuing you agree to our Terms & Conditions and Privacy Policy.
           Please gamble responsibly. BeGambleAware.org
-        </p>
+        </motion.p>
 
         {/* Login link */}
-        <p className="text-sm text-center" style={{ color: '#7B8CAA' }}>
+        <motion.p variants={item} className="text-sm text-center" style={{ color: '#7B8CAA' }}>
           Already have an account?{' '}
           <button
             type="button"
@@ -131,18 +149,19 @@ export default function LandingScreen() {
           >
             Log in
           </button>
-        </p>
+        </motion.p>
 
         {/* Skip signup — browse with a guest profile */}
-        <button
+        <motion.button
+          variants={item}
           type="button"
           onClick={skipSignup}
           className="mt-4 text-sm font-medium transition-opacity active:opacity-70"
           style={{ color: '#7B8CAA' }}
         >
           Skip for now
-        </button>
-      </div>
-    </div>
+        </motion.button>
+      </motion.div>
+    </motion.div>
   );
 }

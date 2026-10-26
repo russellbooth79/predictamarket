@@ -3,6 +3,8 @@
  * Instagram Stories-style sport circles. Active = glowing gradient ring.
  */
 
+import { motion } from 'framer-motion';
+
 const SPORTS = [
   { id: 'football',    icon: '⚽', label: 'Football' },
   { id: 'horseracing', icon: '🏇', label: 'Racing' },
@@ -32,30 +34,29 @@ export default function SportNav({ activeSport, onSportChange }) {
               onClick={() => onSportChange(sport.id)}
               className="shrink-0 flex flex-col items-center gap-1.5 transition-all duration-200"
             >
-              {/* Circle with gradient ring when active */}
-              <div
-                className="relative"
-                style={{ padding: isActive ? '2px' : '2px' }}
-              >
-                {/* Gradient ring */}
+              {/* Circle — the active gradient ring slides between sports via layoutId */}
+              <motion.div className="relative w-[60px] h-[60px] p-0.5" whileTap={{ scale: 0.92 }}>
+                {isActive && (
+                  <motion.div
+                    layoutId="sport-nav-ring"
+                    className="absolute inset-0.5 rounded-full"
+                    style={{
+                      background: 'linear-gradient(135deg, #6C63FF 0%, #FF3366 50%, #9B5DE5 100%)',
+                      boxShadow: '0 0 16px rgba(108,99,255,0.5)',
+                    }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+                  />
+                )}
                 <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center"
-                  style={
-                    isActive
-                      ? {
-                          background: 'linear-gradient(135deg, #6C63FF 0%, #FF3366 50%, #9B5DE5 100%)',
-                          padding: '2px',
-                          boxShadow: '0 0 16px rgba(108,99,255,0.5)',
-                        }
-                      : {
-                          background: 'rgba(255,255,255,0.08)',
-                          padding: '2px',
-                          border: '2px solid rgba(255,255,255,0.08)',
-                        }
-                  }
+                  className="relative w-14 h-14 rounded-full flex items-center justify-center"
+                  style={{
+                    padding: '2px',
+                    border: isActive ? 'none' : '2px solid rgba(255,255,255,0.08)',
+                    background: isActive ? 'transparent' : 'rgba(255,255,255,0.08)',
+                  }}
                 >
                   <div
-                    className="w-full h-full rounded-full flex items-center justify-center text-2xl"
+                    className="w-full h-full rounded-full flex items-center justify-center text-2xl transition-colors duration-200"
                     style={{
                       background: isActive
                         ? 'rgba(5,8,15,0.95)'
@@ -65,10 +66,10 @@ export default function SportNav({ activeSport, onSportChange }) {
                     {sport.icon}
                   </div>
                 </div>
-              </div>
+              </motion.div>
               {/* Label */}
               <span
-                className="text-[10px] font-semibold tracking-wide"
+                className="text-[10px] font-semibold tracking-wide transition-colors duration-200"
                 style={{
                   color: isActive ? '#B0A5FF' : '#3A4560',
                 }}
