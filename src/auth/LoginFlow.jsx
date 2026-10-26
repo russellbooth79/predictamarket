@@ -102,7 +102,7 @@ export default function LoginFlow({ isOpen }) {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed inset-0 flex flex-col"
+            className="fixed inset-0 flex flex-col overflow-hidden"
             style={{
               zIndex: 110,
               backgroundColor: '#05080F',
@@ -121,7 +121,7 @@ export default function LoginFlow({ isOpen }) {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                className="flex flex-col flex-1 overflow-y-auto px-6 pt-6 pb-8"
+                className="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6 pt-6 pb-8"
                 style={{ maxWidth: '480px', margin: '0 auto', width: '100%' }}
               >
                 {step === 1 && (
@@ -230,7 +230,7 @@ function LoginPhoneStep({
           onChange={e => onPhoneChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="07700 900000"
-          className="flex-1 bg-transparent outline-none px-4 font-mono text-lg"
+          className="flex-1 min-w-0 bg-transparent outline-none px-4 font-mono text-lg"
           style={{ color: '#F0F6FF', caretColor: '#6C63FF' }}
           autoFocus
           autoComplete="tel-national"

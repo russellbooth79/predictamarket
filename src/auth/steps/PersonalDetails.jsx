@@ -184,7 +184,7 @@ export default function PersonalDetails({ onNext, onBack, prefill = {}, totalSte
         </label>
         <div className="flex items-start gap-2">
           {/* Day */}
-          <div className="flex flex-col flex-1">
+          <div className="flex flex-col flex-1 min-w-0">
             <input
               type="text"
               inputMode="numeric"
@@ -205,7 +205,7 @@ export default function PersonalDetails({ onNext, onBack, prefill = {}, totalSte
           </div>
           <span className="font-mono text-base mt-3 shrink-0" style={{ color: '#3A4560' }}>/</span>
           {/* Month */}
-          <div className="flex flex-col flex-1">
+          <div className="flex flex-col flex-1 min-w-0">
             <input
               ref={dobMonthRef}
               type="text"
@@ -227,7 +227,7 @@ export default function PersonalDetails({ onNext, onBack, prefill = {}, totalSte
           </div>
           <span className="font-mono text-base mt-3 shrink-0" style={{ color: '#3A4560' }}>/</span>
           {/* Year */}
-          <div className="flex flex-col" style={{ flex: 2 }}>
+          <div className="flex flex-col min-w-0" style={{ flex: 2 }}>
             <input
               ref={dobYearRef}
               type="text"
@@ -274,7 +274,7 @@ export default function PersonalDetails({ onNext, onBack, prefill = {}, totalSte
             value={postcode}
             onChange={e => { setPostcode(e.target.value.toUpperCase()); setLookupError(''); }}
             placeholder="SW1A 1AA"
-            className="flex-1 rounded-xl px-4 outline-none uppercase font-mono text-base"
+            className="flex-1 min-w-0 rounded-xl px-4 outline-none uppercase font-mono text-base"
             style={{
               height: '56px',
               background: 'rgba(255,255,255,0.04)',
@@ -288,7 +288,7 @@ export default function PersonalDetails({ onNext, onBack, prefill = {}, totalSte
             type="button"
             onClick={handleLookup}
             disabled={!postcode.trim() || addressLookupLoading}
-            className="flex items-center gap-2 px-4 rounded-xl text-sm font-semibold transition-opacity"
+            className="flex items-center gap-2 px-4 rounded-xl text-sm font-semibold transition-opacity shrink-0"
             style={{
               background: 'rgba(108,99,255,0.15)',
               border: '1px solid rgba(108,99,255,0.3)',

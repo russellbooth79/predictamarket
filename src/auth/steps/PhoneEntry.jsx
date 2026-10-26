@@ -24,7 +24,7 @@ function normaliseToE164(raw) {
   return digits;
 }
 
-export default function PhoneEntry({ onNext, onClose, sendOTP, onSSOPrefill }) {
+export default function PhoneEntry({ onNext, onClose, onSkip, sendOTP, onSSOPrefill }) {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(null);
@@ -72,9 +72,17 @@ export default function PhoneEntry({ onNext, onClose, sendOTP, onSSOPrefill }) {
   }
 
   return (
-    <div className="flex flex-col h-full px-6 pt-6 pb-8">
+    <div className="flex flex-col min-h-full shrink-0 px-6 pt-6 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-end mb-10">
+      <div className="flex items-center justify-between mb-8">
+        <button
+          type="button"
+          onClick={onSkip}
+          className="text-sm font-medium px-2 py-2 transition-opacity active:opacity-70"
+          style={{ color: '#7B8CAA' }}
+        >
+          Skip for now
+        </button>
         <button
           onClick={onClose}
           className="p-2 rounded-xl transition-colors"
@@ -122,7 +130,7 @@ export default function PhoneEntry({ onNext, onClose, sendOTP, onSSOPrefill }) {
           onChange={handlePhoneInput}
           onKeyDown={handleKeyDown}
           placeholder="07700 900000"
-          className="flex-1 bg-transparent outline-none px-4 font-mono text-lg"
+          className="flex-1 min-w-0 bg-transparent outline-none px-4 font-mono text-lg"
           style={{ color: '#F0F6FF', caretColor: '#6C63FF' }}
           autoFocus
           autoComplete="tel-national"

@@ -171,7 +171,7 @@ export default function OTPVerification({
   const maskedPhone = phone.replace(/(\+44)(\d+)(\d{4})/, '$1•••••$3');
 
   return (
-    <div className="flex flex-col h-full px-6 pt-6 pb-8">
+    <div className="flex flex-col min-h-full shrink-0 px-6 pt-6 pb-8">
       {/* Header row */}
       <div className="flex items-center justify-between mb-8">
         <button

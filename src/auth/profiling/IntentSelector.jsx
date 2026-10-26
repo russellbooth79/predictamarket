@@ -46,7 +46,7 @@ export default function IntentSelector({ firstName, onNext, onSkip }) {
   const [selected, setSelected] = useState(null);
 
   return (
-    <div className="flex flex-col h-full px-6 pt-8 pb-8">
+    <div className="flex flex-col min-h-full shrink-0 px-6 pt-8 pb-8">
       {/* Header with skip */}
       <div className="flex items-center justify-end mb-8">
         <button

@@ -12,11 +12,11 @@
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function LandingScreen() {
-  const { openSignup, openLogin } = useAuth();
+  const { openSignup, openLogin, skipSignup } = useAuth();
 
   return (
     <div
-      className="fixed inset-0 flex flex-col items-center justify-center px-6"
+      className="fixed inset-0 flex flex-col items-center justify-center px-6 overflow-hidden"
       style={{
         zIndex: 100,
         backgroundColor: '#05080F',
@@ -132,6 +132,16 @@ export default function LandingScreen() {
             Log in
           </button>
         </p>
+
+        {/* Skip signup — browse with a guest profile */}
+        <button
+          type="button"
+          onClick={skipSignup}
+          className="mt-4 text-sm font-medium transition-opacity active:opacity-70"
+          style={{ color: '#7B8CAA' }}
+        >
+          Skip for now
+        </button>
       </div>
     </div>
   );

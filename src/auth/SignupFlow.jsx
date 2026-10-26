@@ -43,7 +43,7 @@ const stepVariants = {
 const TOTAL_DOTS = 4; // Steps 2–5 show progress dots (step 1 has no dots per spec)
 
 export default function SignupFlow({ isOpen }) {
-  const { closeAuthModal, sendOTP, verifyOTP, completeSignup } = useAuth();
+  const { closeAuthModal, sendOTP, verifyOTP, completeSignup, skipSignup } = useAuth();
 
   const [step, setStep] = useState(1);
   const [dir, setDir] = useState(1);
@@ -73,6 +73,15 @@ export default function SignupFlow({ isOpen }) {
     closeAuthModal();
   }
 
+  function handleSkip() {
+    // Reset wizard state so a later signup (e.g. after logout) starts fresh
+    setStep(1);
+    setDir(1);
+    setFormData({});
+    setSsoPrefill(null);
+    skipSignup();
+  }
+
   const handleCompleteSignup = useCallback(async (stepData) => {
     const allData = { ...formData, ...stepData };
     setSubmitting(true);
@@ -94,7 +103,7 @@ export default function SignupFlow({ isOpen }) {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 flex flex-col"
+          className="fixed inset-0 flex flex-col overflow-hidden"
           style={{
             zIndex: 110,
             backgroundColor: '#05080F',
@@ -117,13 +126,14 @@ export default function SignupFlow({ isOpen }) {
               initial="enter"
               animate="center"
               exit="exit"
-              className="flex flex-col flex-1 min-h-0"
+              className="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
               style={{ maxWidth: '480px', margin: '0 auto', width: '100%' }}
             >
               {step === 1 && (
                 <PhoneEntry
                   onNext={(data) => advance(data)}
                   onClose={handleClose}
+                  onSkip={handleSkip}
                   sendOTP={sendOTP}
                   onSSOPrefill={(data) => {
                     setSsoPrefill(data);

@@ -81,7 +81,7 @@ export default function DepositLimits({ onNext, onBack, totalSteps = 4, currentS
   const currentSelection = selections[activeTab];
 
   return (
-    <div className="flex flex-col h-full px-6 pt-6 pb-8 overflow-y-auto">
+    <div className="flex flex-col min-h-full shrink-0 px-6 pt-6 pb-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <button
@@ -163,7 +163,7 @@ export default function DepositLimits({ onNext, onBack, totalSteps = 4, currentS
               onChange={handleCustomInput}
               placeholder="Enter amount"
               autoFocus
-              className="flex-1 bg-transparent outline-none pr-4 font-mono text-base"
+              className="flex-1 min-w-0 bg-transparent outline-none pr-4 font-mono text-base"
               style={{ color: '#F0F6FF', caretColor: '#6C63FF' }}
             />
           </div>

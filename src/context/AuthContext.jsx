@@ -162,6 +162,45 @@ function buildUserProfile(formData) {
   };
 }
 
+/**
+ * Minimal profile for users who haven't completed signup — returning users
+ * with no stored session, and visitors who skip signup to browse.
+ */
+function buildGuestProfile({ name, initials, phone = '' }) {
+  return {
+    id: `user-${Date.now()}`,
+    name,
+    initials,
+    phone,
+    email: '',
+    dob: '',
+    postcode: '',
+    addressLine1: '',
+    addressLine2: null,
+    city: '',
+    balance: 0.00,
+    currency: 'GBP',
+    memberSince: new Date().toISOString(),
+    totalBets: 0,
+    totalWins: 0,
+    winRate: 0,
+    verified: false,
+    kycTier: 0,
+    depositLimit: { daily: 150, weekly: 500, monthly: 1500 },
+    preferences: {
+      oddsFormat: 'probability',
+      defaultStake: 5.00,
+      notificationsEnabled: true,
+      favouriteTeams: [],
+      favouriteSports: [],
+      intent: null,
+      styleSignal: null,
+      profilingCompletedAt: null,
+    },
+    activePromotions: [],
+  };
+}
+
 // ── Provider ───────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }) {
@@ -272,38 +311,16 @@ export function AuthProvider({ children }) {
     }
 
     // No stored session — create a guest returning-user profile
-    const user = {
-      id: `user-${Date.now()}`,
-      name: 'Returning User',
-      initials: 'RU',
-      phone,
-      email: '',
-      dob: '',
-      postcode: '',
-      addressLine1: '',
-      addressLine2: null,
-      city: '',
-      balance: 0.00,
-      currency: 'GBP',
-      memberSince: new Date().toISOString(),
-      totalBets: 0,
-      totalWins: 0,
-      winRate: 0,
-      verified: false,
-      kycTier: 0,
-      depositLimit: { daily: 150, weekly: 500, monthly: 1500 },
-      preferences: {
-        oddsFormat: 'probability',
-        defaultStake: 5.00,
-        notificationsEnabled: true,
-        favouriteTeams: [],
-        favouriteSports: [],
-        intent: null,
-        styleSignal: null,
-        profilingCompletedAt: null,
-      },
-      activePromotions: [],
-    };
+    const user = buildGuestProfile({ name: 'Returning User', initials: 'RU', phone });
+    dispatch({ type: 'LOGIN_SUCCESS', payload: { user } });
+  }, []);
+
+  /**
+   * skipSignup — lets a visitor bypass the signup wizard and browse the app
+   * with a guest profile. Profiling is skipped too, since there's no account.
+   */
+  const skipSignup = useCallback(() => {
+    const user = buildGuestProfile({ name: 'Guest', initials: 'G' });
     dispatch({ type: 'LOGIN_SUCCESS', payload: { user } });
   }, []);
 
@@ -364,6 +381,7 @@ export function AuthProvider({ children }) {
     verifyOTP: verifyOTPAction,
     completeSignup,
     loginWithPhone,
+    skipSignup,
     savePreferences,
     closeProfiling,
     logout,

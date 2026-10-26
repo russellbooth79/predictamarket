@@ -42,7 +42,7 @@ export default function SportsSelector({ onNext, onBack, onSkip, isFinalStep = f
   }
 
   return (
-    <div className="flex flex-col h-full px-6 pt-6 pb-8 overflow-y-auto">
+    <div className="flex flex-col min-h-full shrink-0 px-6 pt-6 pb-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <button

@@ -88,7 +88,7 @@ export default function PlayerProfiling({ isOpen }) {
   return (
     <AnimatePresence>
       {isOpen && <motion.div
-        className="fixed inset-0 flex flex-col"
+        className="fixed inset-0 flex flex-col overflow-hidden"
         style={{
           zIndex: 120,
           backgroundColor: '#05080F',
@@ -115,7 +115,7 @@ export default function PlayerProfiling({ isOpen }) {
             initial="enter"
             animate="center"
             exit="exit"
-            className="flex flex-col flex-1 overflow-y-auto relative"
+            className="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative"
             style={{ maxWidth: '480px', margin: '0 auto', width: '100%' }}
           >
             {step === STEPS.INTENT && (
