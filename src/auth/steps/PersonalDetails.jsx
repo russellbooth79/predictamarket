@@ -201,9 +201,9 @@ export default function PersonalDetails({ onNext, onBack, prefill = {}, totalSte
                 caretColor: '#6C63FF',
               }}
             />
-            <span className="text-[10px] text-center mt-1 font-medium" style={{ color: '#3A4560' }}>Day</span>
+            <span className="text-[10px] text-center mt-1 font-medium" style={{ color: '#6B7894' }}>Day</span>
           </div>
-          <span className="font-mono text-base mt-3 shrink-0" style={{ color: '#3A4560' }}>/</span>
+          <span className="font-mono text-base mt-3 shrink-0" style={{ color: '#6B7894' }}>/</span>
           {/* Month */}
           <div className="flex flex-col flex-1 min-w-0">
             <input
@@ -223,9 +223,9 @@ export default function PersonalDetails({ onNext, onBack, prefill = {}, totalSte
                 caretColor: '#6C63FF',
               }}
             />
-            <span className="text-[10px] text-center mt-1 font-medium" style={{ color: '#3A4560' }}>Month</span>
+            <span className="text-[10px] text-center mt-1 font-medium" style={{ color: '#6B7894' }}>Month</span>
           </div>
-          <span className="font-mono text-base mt-3 shrink-0" style={{ color: '#3A4560' }}>/</span>
+          <span className="font-mono text-base mt-3 shrink-0" style={{ color: '#6B7894' }}>/</span>
           {/* Year */}
           <div className="flex flex-col min-w-0" style={{ flex: 2 }}>
             <input
@@ -245,7 +245,7 @@ export default function PersonalDetails({ onNext, onBack, prefill = {}, totalSte
                 caretColor: '#6C63FF',
               }}
             />
-            <span className="text-[10px] text-center mt-1 font-medium" style={{ color: '#3A4560' }}>Year</span>
+            <span className="text-[10px] text-center mt-1 font-medium" style={{ color: '#6B7894' }}>Year</span>
           </div>
         </div>
         {errors.dob && <p className="text-xs mt-1" style={{ color: '#FF3366' }}>{errors.dob}</p>}

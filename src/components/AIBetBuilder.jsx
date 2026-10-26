@@ -105,7 +105,7 @@ function SuggestionCard({ suggestion, onAdd, onDismiss }) {
             >
               {suggestion.odds}
             </span>
-            <button onClick={onDismiss} style={{ color: '#3A4560' }}>
+            <button onClick={onDismiss} style={{ color: '#6B7894' }}>
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -276,7 +276,7 @@ export default function AIBetBuilder() {
               boxShadow: input.trim() ? '0 4px 16px rgba(108,99,255,0.4)' : 'none',
             }}
           >
-            <Send className="w-4 h-4" style={{ color: input.trim() ? '#F0F6FF' : '#3A4560' }} />
+            <Send className="w-4 h-4" style={{ color: input.trim() ? '#F0F6FF' : '#6B7894' }} />
           </button>
         </form>
       </div>

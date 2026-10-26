@@ -25,7 +25,7 @@ const C = {
   primary: '#6C63FF',
   text: '#F0F6FF',
   textSub: '#7B8CAA',
-  textMuted: '#3A4560',
+  textMuted: '#6B7894',
   live: '#FF3366',
   green: '#00F5A0',
   home: '#6C63FF',
@@ -535,7 +535,7 @@ function OddsGraph({ history, isLive, homeTeam, awayTeam }) {
           <g key={val}>
             <line x1={PAD.left} y1={toSvgY(val)} x2={W - PAD.right} y2={toSvgY(val)}
               stroke="rgba(108,99,255,0.08)" strokeWidth="0.5" strokeDasharray="4 4" />
-            <text x={PAD.left - 5} y={toSvgY(val) + 4} fill="#3A4560" fontSize="9" textAnchor="end" fontFamily="monospace">
+            <text x={PAD.left - 5} y={toSvgY(val) + 4} fill="#6B7894" fontSize="9" textAnchor="end" fontFamily="monospace">
               {val}%
             </text>
           </g>

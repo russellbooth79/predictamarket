@@ -1,7 +1,7 @@
 /**
  * BetSlipContext.jsx
  *
- * Manages the bet slip (Position Builder) state via useReducer.
+ * Manages the bet slip state via useReducer.
  *
  * State machine: idle -> confirming -> submitting -> success -> idle
  *                                  \-> error -> idle

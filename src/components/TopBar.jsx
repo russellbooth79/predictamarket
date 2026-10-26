@@ -8,15 +8,7 @@ import { motion } from 'framer-motion';
 import { Bell, ChevronDown, User, History, ShieldCheck, LogOut } from 'lucide-react';
 import { useUser } from '../context/UserContext.jsx';
 import OddsFormatToggle from './OddsFormatToggle.jsx';
-
-const SPORTS = [
-  { id: 'football',    label: 'Football',  icon: '⚽' },
-  { id: 'horseracing', label: 'Racing',    icon: '🏇' },
-  { id: 'tennis',      label: 'Tennis',    icon: '🎾' },
-  { id: 'boxing',      label: 'Boxing',    icon: '🥊' },
-  { id: 'nfl',         label: 'NFL',       icon: '🏈' },
-  { id: 'nba',         label: 'NBA',       icon: '🏀' },
-];
+import { SPORTS } from '../data/sports.js';
 
 const DROPDOWN_ITEMS = [
   { id: 'account',     label: 'Account',              icon: User },
@@ -25,7 +17,7 @@ const DROPDOWN_ITEMS = [
   { id: 'signout',     label: 'Sign Out',              icon: LogOut },
 ];
 
-export default function TopBar({ activeSport, onSportChange, onDropdownAction }) {
+export default function TopBar({ activeSport, onSportChange, onDropdownAction, availableSports }) {
   const { user } = useUser();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [balancePulse, setBalancePulse] = useState(false);
@@ -84,7 +76,7 @@ export default function TopBar({ activeSport, onSportChange, onDropdownAction })
 
       {/* Desktop sport nav */}
       <nav className="hidden lg:flex items-center gap-1 ml-8">
-        {SPORTS.map((sport) => {
+        {SPORTS.filter(s => !availableSports || availableSports.includes(s.id)).map((sport) => {
           const isActive = activeSport === sport.id;
           return (
             <button
@@ -129,7 +121,10 @@ export default function TopBar({ activeSport, onSportChange, onDropdownAction })
 
       {/* Right side */}
       <div className="ml-auto flex items-center gap-3">
-        <OddsFormatToggle />
+        {/* Odds format lives in Account on mobile to keep the bar clear */}
+        <div className="hidden lg:block">
+          <OddsFormatToggle />
+        </div>
 
         {/* Balance */}
         <div

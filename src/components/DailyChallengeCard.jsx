@@ -123,7 +123,7 @@ export default function DailyChallengeCard({ index = 1 }) {
                 className="w-full py-3.5 rounded-xl text-sm font-black mt-3 transition-all duration-200"
                 style={{
                   background: selected !== null ? 'linear-gradient(135deg, #00F5A0 0%, #00D4FF 100%)' : 'rgba(255,255,255,0.05)',
-                  color: selected !== null ? '#05080F' : '#3A4560',
+                  color: selected !== null ? '#05080F' : '#6B7894',
                   cursor: selected !== null ? 'pointer' : 'not-allowed',
                   boxShadow: selected !== null ? '0 4px 16px rgba(0,245,160,0.3)' : 'none',
                 }}

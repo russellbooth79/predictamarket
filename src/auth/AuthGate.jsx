@@ -45,7 +45,7 @@ function AppLoadingScreen() {
             WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0)',
           }}
         />
-        <span className="text-sm font-black tracking-widest" style={{ color: '#3A4560' }}>
+        <span className="text-sm font-black tracking-widest" style={{ color: '#6B7894' }}>
           PUNT
         </span>
       </div>

@@ -111,7 +111,7 @@ export default function AmericanSportsCard({ fixture, index = 0 }) {
             {sportLabel}
           </span>
           {fixture.conference && (
-            <span className="text-xs" style={{ color: '#3A4560' }}>{fixture.conference}</span>
+            <span className="text-xs" style={{ color: '#6B7894' }}>{fixture.conference}</span>
           )}
         </div>
 
@@ -158,7 +158,7 @@ export default function AmericanSportsCard({ fixture, index = 0 }) {
                 {fixture.homeTeam}
               </span>
               {fixture.spread && (
-                <span className="font-mono text-xs" style={{ color: '#3A4560' }}>{fixture.spread.home}</span>
+                <span className="font-mono text-xs" style={{ color: '#6B7894' }}>{fixture.spread.home}</span>
               )}
             </div>
           </div>
@@ -177,7 +177,7 @@ export default function AmericanSportsCard({ fixture, index = 0 }) {
               >
                 {fixture.liveScore.home}
               </span>
-              <span style={{ color: '#3A4560' }}>–</span>
+              <span style={{ color: '#6B7894' }}>–</span>
               <span
                 className="font-mono text-3xl font-black"
                 style={{
@@ -193,7 +193,7 @@ export default function AmericanSportsCard({ fixture, index = 0 }) {
           ) : (
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mx-3"
-              style={{ background: 'rgba(255,255,255,0.04)', color: '#3A4560', border: '1px solid rgba(255,255,255,0.06)' }}
+              style={{ background: 'rgba(255,255,255,0.04)', color: '#6B7894', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               vs
             </div>
@@ -206,7 +206,7 @@ export default function AmericanSportsCard({ fixture, index = 0 }) {
                 {fixture.awayTeam}
               </span>
               {fixture.spread && (
-                <span className="font-mono text-xs" style={{ color: '#3A4560' }}>{fixture.spread.away}</span>
+                <span className="font-mono text-xs" style={{ color: '#6B7894' }}>{fixture.spread.away}</span>
               )}
             </div>
             <div
@@ -300,8 +300,8 @@ export default function AmericanSportsCard({ fixture, index = 0 }) {
           className="flex items-center justify-center gap-1.5 px-4 py-2"
           style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
         >
-          <MapPin className="w-3 h-3" style={{ color: '#3A4560' }} />
-          <span className="text-xs" style={{ color: '#3A4560' }}>{fixture.venue}</span>
+          <MapPin className="w-3 h-3" style={{ color: '#6B7894' }} />
+          <span className="text-xs" style={{ color: '#6B7894' }}>{fixture.venue}</span>
         </div>
       )}
     </motion.div>

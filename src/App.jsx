@@ -1,20 +1,22 @@
 /**
- * App.jsx — PredictaMarket v4
+ * App.jsx — PredictaMarket v5
  *
  * Navigation model:
- *   activeView: 'home' | 'live' | 'markets' | 'explore' | 'casino' | 'account'
+ *   activeView: 'home' | 'live' | 'mybets' | 'explore' | 'casino' | 'account'
  *   activeSport: 'football' | 'horseracing' | 'tennis' | 'boxing' | 'nfl' | 'nba'
  *   mobileSlipOpen: boolean (lifted from PositionBuilder)
  *
- * Bottom nav (mobile):
- *   Home  → activeView = 'home'
- *   Live  → activeView = 'live'   (aggregated live events across all sports)
- *   Slip  → mobileSlipOpen = true  (opens Position Builder bottom sheet)
- *   Markets → activeView = 'markets'  (sport/competition explorer)
- *   Account → activeView = 'account'  (profile, bet history)
+ * Bottom nav (mobile), filtered by the user's intent from profiling:
+ *   Home    → activeView = 'home'
+ *   Live    → activeView = 'live'    (aggregated live events across all sports)
+ *   My Bets → activeView = 'mybets'  (open and settled bets)
+ *   Casino  → activeView = 'casino'  (casino or both intents only)
+ *   Account → activeView = 'account' (profile, odds display, limits)
+ * The bet slip is a tray that slides up once a selection is added.
  *
  * Desktop sidebar shows competition tree for active sport.
- * Sport nav pills (mobile) only visible when activeView === 'home'.
+ * Sport chips (mobile) only visible when activeView === 'home', and only
+ * for sports that currently have markets.
  *
  * Auth changes (v4.1):
  *   - AuthProvider wraps everything
@@ -42,11 +44,8 @@ import {
   useNbaOdds,
   useHorseRacingOdds,
 } from './hooks/useOdds.js';
-import SwipeFeed from './components/SwipeFeed.jsx';
-import DailyChallengeCard from './components/DailyChallengeCard.jsx';
 import PredictionFeed from './components/PredictionFeed.jsx';
 import CasinoLobby from './components/CasinoLobby.jsx';
-import { useIsMobile } from './hooks/useIsMobile.js';
 import TopBar from './components/TopBar.jsx';
 import SportNav from './components/SportNav.jsx';
 import EventCard from './components/EventCard.jsx';
@@ -54,15 +53,15 @@ import HorseRacingCard from './components/HorseRacingCard.jsx';
 import TennisCard from './components/TennisCard.jsx';
 import FightCard from './components/FightCard.jsx';
 import AmericanSportsCard from './components/AmericanSportsCard.jsx';
-import DiscoverySurface from './components/DiscoverySurface.jsx';
-import LiveTicker from './components/LiveTicker.jsx';
+import FootballHome from './components/FootballHome.jsx';
+import OddsFormatToggle from './components/OddsFormatToggle.jsx';
 import PositionBuilder from './components/PositionBuilder.jsx';
-import MyBets from './components/MyBets.jsx';
+import MyBets, { MyBetsPage } from './components/MyBets.jsx';
 import MatchDetailView from './components/MatchDetailView.jsx';
 import {
   Trophy, Radio, Calendar, Star,
-  Home, Zap, LayoutGrid, BarChart3, User,
-  ChevronRight, Clock, Activity, Dices,
+  Home, Zap, User, Ticket,
+  ChevronRight, Activity, Dices,
 } from 'lucide-react';
 
 // ── Colour palette — v4 dark sport futurism ───────────────────────────────────
@@ -79,7 +78,7 @@ const C = {
   green: '#00F5A0',
   text: '#F0F6FF',
   textSecondary: '#7B8CAA',
-  textMuted: '#3A4560',
+  textMuted: '#6B7894',
 };
 
 // ── Sidebar competition config ────────────────────────────────────────────────
@@ -139,17 +138,6 @@ const SPORT_NAMES = {
   nba: 'NBA',
 };
 
-// ── Sport card config for Markets view ───────────────────────────────────────
-
-const SPORT_TILES = [
-  { id: 'football', label: 'Football', icon: '⚽', desc: 'EPL · UCL · EFL · La Liga' },
-  { id: 'boxing', label: 'Boxing & MMA', icon: '🥊', desc: 'Title fights · UFC events' },
-  { id: 'tennis', label: 'Tennis', icon: '🎾', desc: 'ATP · WTA Grand Slams' },
-  { id: 'nba', label: 'NBA', icon: '🏀', desc: 'Eastern · Western Conference' },
-  { id: 'nfl', label: 'NFL', icon: '🏈', desc: 'AFC · NFC · Sunday Night' },
-  { id: 'horseracing', label: 'Horse Racing', icon: '🏇', desc: 'UK & Ireland Win Markets' },
-];
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getLiveLabel(fixture) {
@@ -157,13 +145,6 @@ function getLiveLabel(fixture) {
     return `${(fixture.player1?.name || fixture.homeTeam).split(' ').pop()} vs ${(fixture.player2?.name || fixture.awayTeam).split(' ').pop()}`;
   }
   return `${(fixture.homeTeam || '').split(' ').pop()} vs ${(fixture.awayTeam || '').split(' ').pop()}`;
-}
-
-function getTimeOfDayBias() {
-  const h = new Date().getHours();
-  if (h >= 22 || h < 5) return 'casino';
-  if (h >= 18) return 'evening';
-  return 'sports';
 }
 
 function formatTime(iso) {
@@ -239,112 +220,6 @@ function LiveView({ allFixtures, onViewMatch }) {
   );
 }
 
-// ── Markets View ──────────────────────────────────────────────────────────────
-
-function MarketsView({ onSportSelect, fixtureCounts }) {
-  return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-black font-display mb-1" style={{ color: C.text }}>All Markets</h1>
-        <p className="text-sm" style={{ color: C.textSecondary }}>
-          Every sport. Every competition. Right now.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        {SPORT_TILES.map(tile => {
-          const count = fixtureCounts[tile.id] || 0;
-          return (
-            <button
-              key={tile.id}
-              onClick={() => onSportSelect(tile.id)}
-              className="rounded-2xl p-4 text-left transition-all duration-200"
-              style={{
-                background: 'rgba(12,17,30,0.75)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255,255,255,0.07)',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = 'rgba(108,99,255,0.4)';
-                e.currentTarget.style.boxShadow = '0 0 0 1px rgba(108,99,255,0.15), 0 8px 24px rgba(0,0,0,0.4)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
-                e.currentTarget.style.boxShadow = 'none';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              <span className="text-3xl block mb-3">{tile.icon}</span>
-              <span className="text-sm font-black font-display block mb-0.5" style={{ color: C.text }}>{tile.label}</span>
-              <span className="text-xs block mb-3" style={{ color: C.textSecondary }}>{tile.desc}</span>
-              {count > 0 ? (
-                <span
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: 'rgba(108,99,255,0.12)', color: '#9B8FFF', border: '1px solid rgba(108,99,255,0.2)' }}
-                >
-                  {count} events
-                </span>
-              ) : (
-                <span
-                  className="text-[10px] px-2 py-0.5 rounded-full"
-                  style={{ background: 'rgba(255,255,255,0.04)', color: C.textMuted, border: `1px solid ${C.border}` }}
-                >
-                  Loading…
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-8">
-        <div className="flex items-center gap-2.5 mb-4">
-          <Trophy className="w-4 h-4" style={{ color: '#FFD700' }} />
-          <h2 className="text-xs font-black uppercase tracking-widest" style={{ color: C.textMuted }}>
-            Popular Competitions
-          </h2>
-        </div>
-        <div className="space-y-2">
-          {[
-            { label: 'Premier League', sport: 'football', icon: '⚽' },
-            { label: 'Champions League', sport: 'football', icon: '⚽' },
-            { label: 'NFL', sport: 'nfl', icon: '🏈' },
-            { label: 'NBA', sport: 'nba', icon: '🏀' },
-            { label: 'Boxing', sport: 'boxing', icon: '🥊' },
-            { label: 'Tennis', sport: 'tennis', icon: '🎾' },
-          ].map(comp => (
-            <button
-              key={comp.label}
-              onClick={() => onSportSelect(comp.sport)}
-              className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all duration-200"
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.07)',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(108,99,255,0.06)';
-                e.currentTarget.style.borderColor = 'rgba(108,99,255,0.25)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-lg">{comp.icon}</span>
-                <span className="text-sm font-semibold font-display" style={{ color: C.text }}>{comp.label}</span>
-              </div>
-              <ChevronRight className="w-4 h-4" style={{ color: C.textMuted }} />
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Account View ──────────────────────────────────────────────────────────────
 
 const INTENT_OPTIONS = [
@@ -354,8 +229,8 @@ const INTENT_OPTIONS = [
 ];
 
 function AccountView({ onOpenMyBets }) {
-  const { user } = useUser();
-  const { selections } = useBetSlip();
+  const { user, bets } = useUser();
+  const openBetCount = bets.filter(b => b.status === 'open').length;
   const { logout, savePreferences } = useAuth();
   const [editingIntent, setEditingIntent] = useState(false);
 
@@ -403,7 +278,7 @@ function AccountView({ onOpenMyBets }) {
             </p>
           </div>
           <div className="rounded-xl p-3" style={{ background: 'rgba(108,99,255,0.07)', border: '1px solid rgba(108,99,255,0.15)' }}>
-            <p className="text-xs mb-1" style={{ color: C.textSecondary }}>Selections</p>
+            <p className="text-xs mb-1" style={{ color: C.textSecondary }}>Open bets</p>
             <p
               className="font-mono text-xl font-black"
               style={{
@@ -413,13 +288,25 @@ function AccountView({ onOpenMyBets }) {
                 backgroundClip: 'text',
               }}
             >
-              {selections.length}
+              {openBetCount}
             </p>
           </div>
         </div>
       </div>
 
       <div className="space-y-2 mb-6">
+        {/* Odds display — moved here from the top bar on mobile */}
+        <div
+          className="w-full flex items-center justify-between px-4 py-3 rounded-xl"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div>
+            <p className="text-sm font-medium" style={{ color: C.text }}>Odds display</p>
+            <p className="text-xs" style={{ color: C.textSecondary }}>Chance %, decimal or fractional</p>
+          </div>
+          <OddsFormatToggle />
+        </div>
+
         <button
           onClick={onOpenMyBets}
           className="w-full flex items-center justify-between px-4 py-4 rounded-xl transition-all duration-200"
@@ -579,29 +466,34 @@ function HorseRacingEmpty() {
   );
 }
 
-// ── Mobile Bottom Nav — TikTok style, raised centre Bet Slip button ──────────
+// ── Mobile Bottom Nav ─────────────────────────────────────────────────────────
+// Tabs depend on what the user chose in profiling:
+//   sports      → Home, Live, My Bets, Account
+//   casino      → Casino, Account
+//   both / null → Home, Live, My Bets, Casino, Account
 
-// ── Nav tab config per intent ─────────────────────────────────────────────────
-// sports → Home + Live on left, Markets + Account on right, slip centre
-// casino → Casino on left, Account on right, no slip (casino has no bet slip)
-// both / null → Home + Live on left, Casino + Account on right, slip centre
+function getNavTabs(intent) {
+  if (intent === 'casino') {
+    return [
+      { id: 'casino', label: 'Casino', Icon: Dices },
+      { id: 'account', label: 'Account', Icon: User },
+    ];
+  }
+  return [
+    { id: 'home', label: 'Home', Icon: Home },
+    { id: 'live', label: 'Live', Icon: Zap },
+    { id: 'mybets', label: 'My Bets', Icon: Ticket },
+    ...(intent === 'sports' ? [] : [{ id: 'casino', label: 'Casino', Icon: Dices }]),
+    { id: 'account', label: 'Account', Icon: User },
+  ];
+}
 
-function MobileBottomNav({ activeTab, onTabChange, liveCount, intent }) {
-  const isCasinoOnly = intent === 'casino';
-
-  const leftTabs = isCasinoOnly
-    ? [{ id: 'casino', label: 'Casino', Icon: Dices }]
-    : [{ id: 'home', label: 'Home', Icon: Home }, { id: 'live', label: 'Live', Icon: Zap }];
-
-  const rightTabs = isCasinoOnly
-    ? [{ id: 'account', label: 'Account', Icon: User }]
-    : intent === 'sports'
-    ? [{ id: 'markets', label: 'Markets', Icon: LayoutGrid }, { id: 'account', label: 'Account', Icon: User }]
-    : [{ id: 'casino', label: 'Casino', Icon: Dices }, { id: 'account', label: 'Account', Icon: User }];
+function MobileBottomNav({ activeTab, onTabChange, liveCount, openBetCount, intent }) {
+  const badges = { live: liveCount, mybets: openBetCount };
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-1"
       style={{
         background: 'rgba(5,8,15,0.97)',
         backdropFilter: 'blur(20px)',
@@ -612,15 +504,15 @@ function MobileBottomNav({ activeTab, onTabChange, liveCount, intent }) {
         height: 'var(--bottom-nav-total)',
       }}
     >
-      {/* Left tabs */}
-      {leftTabs.map(tab => {
+      {getNavTabs(intent).map(tab => {
         const { Icon } = tab;
         const isActive = tab.id === activeTab;
+        const badge = badges[tab.id];
         return (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className="flex flex-col items-center gap-0.5 py-2 px-4 relative flex-1 active:opacity-60"
+            className="flex flex-col items-center gap-0.5 py-2 px-1 relative flex-1 active:opacity-60"
           >
             {isActive && (
               <motion.span
@@ -634,52 +526,20 @@ function MobileBottomNav({ activeTab, onTabChange, liveCount, intent }) {
               <Icon
                 className="w-5 h-5 transition-colors duration-200"
                 style={{
-                  color: isActive ? '#9B8FFF' : '#3A4560',
+                  color: isActive ? '#9B8FFF' : '#6B7894',
                   filter: isActive ? 'drop-shadow(0 0 6px rgba(108,99,255,0.6))' : 'none',
                 }}
               />
-              {tab.id === 'live' && liveCount > 0 && (
+              {badge > 0 && (
                 <span
                   className="absolute -top-1.5 -right-2 min-w-[16px] h-4 rounded-full text-[9px] font-black flex items-center justify-center px-1 text-white"
-                  style={{ background: 'linear-gradient(135deg, #FF3366, #FF6B35)' }}
+                  style={{ background: tab.id === 'live' ? 'linear-gradient(135deg, #FF3366, #FF6B35)' : 'linear-gradient(135deg, #6C63FF, #9B5DE5)' }}
                 >
-                  {liveCount > 9 ? '9+' : liveCount}
+                  {badge > 9 ? '9+' : badge}
                 </span>
               )}
             </div>
-            <span className="text-[10px] font-semibold" style={{ color: isActive ? '#9B8FFF' : '#3A4560' }}>
-              {tab.label}
-            </span>
-          </button>
-        );
-      })}
-
-      {/* Right tabs */}
-      {rightTabs.map(tab => {
-        const { Icon } = tab;
-        const isActive = tab.id === activeTab;
-        return (
-          <button
-            key={tab.id}
-            onClick={() => onTabChange(tab.id)}
-            className="flex flex-col items-center gap-0.5 py-2 px-4 relative flex-1 active:opacity-60"
-          >
-            {isActive && (
-              <motion.span
-                layoutId="bottom-nav-indicator"
-                className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full"
-                style={{ background: 'linear-gradient(90deg, #6C63FF, #B06FFF)', boxShadow: '0 0 8px rgba(108,99,255,0.8)' }}
-                transition={{ type: 'spring', stiffness: 500, damping: 38 }}
-              />
-            )}
-            <Icon
-              className="w-5 h-5 transition-colors duration-200"
-              style={{
-                color: isActive ? '#9B8FFF' : '#3A4560',
-                filter: isActive ? 'drop-shadow(0 0 6px rgba(108,99,255,0.6))' : 'none',
-              }}
-            />
-            <span className="text-[10px] font-semibold" style={{ color: isActive ? '#9B8FFF' : '#3A4560' }}>
+            <span className="text-[10px] font-semibold transition-colors duration-200 whitespace-nowrap" style={{ color: isActive ? '#9B8FFF' : '#6B7894' }}>
               {tab.label}
             </span>
           </button>
@@ -692,14 +552,10 @@ function MobileBottomNav({ activeTab, onTabChange, liveCount, intent }) {
 // ── Main App ──────────────────────────────────────────────────────────────────
 
 // ── View transition variants ─────────────────────────────────────────────────
-// Views fade and rise slightly on enter. `slide` is false when the view hosts
-// position:fixed content (the mobile SwipeFeed) — a transform on an ancestor
-// would make that content position relative to the wrapper mid-animation, so
-// those views crossfade with opacity only. Exit is always opacity-only, since
-// the outgoing view may be the one hosting fixed content.
+// Views fade and rise slightly on enter; exit is a quick fade.
 
 const viewVariants = {
-  enter: (slide) => ({ opacity: 0, y: slide ? 10 : 0 }),
+  enter: { opacity: 0, y: 10 },
   center: { opacity: 1, y: 0, transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] } },
   exit: { opacity: 0, transition: { duration: 0.12, ease: 'easeIn' } },
 };
@@ -715,9 +571,9 @@ function AppContent() {
   const [mobileSlipOpen, setMobileSlipOpen] = useState(false);
   const [myBetsOpen, setMyBetsOpen] = useState(false);
   const [selectedFixture, setSelectedFixture] = useState(null);
-  const isMobile = useIsMobile();
   const { logout } = useAuth();
   const hasSlipSelections = useBetSlip().selections.length > 0;
+  const openBetCount = useUser().bets.filter(b => b.status === 'open').length;
 
   // When intent changes (after profiling or settings update), redirect to the right home
   useEffect(() => {
@@ -753,7 +609,7 @@ function AppContent() {
     [allFixtures]
   );
 
-  // ── Fixture counts for markets view ────────────────────────────────────────
+  // ── Fixture counts — sports with none are hidden from the sport nav ────────
   const fixtureCounts = useMemo(() => ({
     football: footballFixturesLive.length,
     tennis: tennisOdds.length,
@@ -762,6 +618,11 @@ function AppContent() {
     nba: nbaOdds.length,
     horseracing: horseRacingOdds.length,
   }), [footballFixturesLive, tennisOdds, boxingOdds, nflOdds, nbaOdds, horseRacingOdds]);
+
+  const availableSports = useMemo(
+    () => Object.keys(fixtureCounts).filter(id => fixtureCounts[id] > 0),
+    [fixtureCounts]
+  );
 
   // ── Live fixtures for current sport (sidebar) ───────────────────────────────
   const sidebarLiveFixtures = useMemo(() => {
@@ -793,20 +654,11 @@ function AppContent() {
     setMobileSlipOpen(false);
     setActiveView(tabId);
     if (tabId === 'home') setSelectedFixture(null);
-    // Scroll to top on tab change
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }
-
-  function handleMarketsSelectSport(sport) {
-    setActiveSport(sport);
-    setActiveView('home');
-    setSelectedFixture(null);
   }
 
   // Key for the main view transition — changes on tab, sport, or match detail
   const showMatchDetail = activeView === 'home' && activeSport === 'football' && selectedFixture;
   const viewKey = showMatchDetail ? `match-${selectedFixture.id}` : activeView === 'home' ? `home-${activeSport}` : activeView;
-  const viewHasFixedFeed = isMobile && activeView === 'home' && activeSport === 'football' && !selectedFixture;
 
   // ── Section subtitle for home view ──────────────────────────────────────────
   function getFixtureSubtitle() {
@@ -833,16 +685,6 @@ function AppContent() {
     ? (matchDetails[selectedFixture.id] || null)
     : null;
 
-  // ── Current sport's fixtures ────────────────────────────────────────────────
-  const sportFixtures = {
-    football: footballFixturesLive,
-    horseracing: horseRacingOdds,
-    tennis: tennisOdds,
-    boxing: boxingOdds,
-    nfl: nflOdds,
-    nba: nbaOdds,
-  };
-
   return (
     <div className="min-h-screen" style={{ backgroundColor: C.bg }}>
       {/* ── Fixed top bar ──────────────────────────────────────────────────── */}
@@ -850,17 +692,13 @@ function AppContent() {
         activeSport={activeSport}
         onSportChange={handleSportChange}
         onDropdownAction={handleDropdownAction}
+        availableSports={availableSports}
       />
 
       {/* ── Mobile sport nav — only visible on home view ───────────────────── */}
       {activeView === 'home' && (
-        <SportNav activeSport={activeSport} onSportChange={handleSportChange} />
+        <SportNav activeSport={activeSport} onSportChange={handleSportChange} availableSports={availableSports} />
       )}
-
-      {/* ── Live score ticker — mobile, always on top ───────────────────────── */}
-      <div className={`lg:hidden sticky z-30 ${activeView === 'home' ? 'top-[calc(3.5rem+80px)]' : 'top-14'}`}>
-        <LiveTicker allFixtures={allFixtures} />
-      </div>
 
       {/* ── Desktop sidebar ────────────────────────────────────────────────── */}
       <aside
@@ -1032,7 +870,6 @@ function AppContent() {
       {/* ── Main content ───────────────────────────────────────────────────── */}
       <main className="pt-14 lg:pl-56 lg:pr-80 pb-20 lg:pb-0">
         {/* Extra top padding on mobile when sport nav is visible */}
-        {activeView === 'home' && <div className="lg:hidden h-12" />}
 
         <div className="p-4 lg:p-6 max-w-3xl mx-auto">
           {/* Scroll to top once the outgoing view has faded, so it doesn't visibly jump */}
@@ -1043,7 +880,6 @@ function AppContent() {
           >
           <motion.div
             key={viewKey}
-            custom={!viewHasFixedFeed}
             variants={viewVariants}
             initial="enter"
             animate="center"
@@ -1059,13 +895,8 @@ function AppContent() {
             }} />
           )}
 
-          {/* ── MARKETS VIEW ──────────────────────────────────────────────── */}
-          {activeView === 'markets' && (
-            <MarketsView
-              onSportSelect={handleMarketsSelectSport}
-              fixtureCounts={fixtureCounts}
-            />
-          )}
+          {/* ── MY BETS VIEW ──────────────────────────────────────────────── */}
+          {activeView === 'mybets' && <MyBetsPage />}
 
           {/* ── ACCOUNT VIEW ──────────────────────────────────────────────── */}
           {activeView === 'account' && (
@@ -1090,105 +921,30 @@ function AppContent() {
                 />
               ) : (
                 <>
-                  {/* Discovery surface — football tab only, desktop only (mobile uses SwipeFeed hero) */}
-                  {activeSport === 'football' && !isMobile && (
-                    <DiscoverySurface
-                      liveFixtures={footballFixturesLive.filter(f => f.isLive)}
-                      onViewMatch={f => setSelectedFixture(f)}
-                    />
-                  )}
-
-                  {/* Section header */}
-                  <div className="mb-5">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h1 className="text-xl font-bold" style={{ color: C.text }}>
-                        {SPORT_NAMES[activeSport]}
-                      </h1>
-                      {/* Mobile live data badge */}
-                      <div className="lg:hidden">
-                        {activeSport === 'football' && footballUsingLive ? (
-                          <span
-                            className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                            style={{ backgroundColor: 'rgba(0,182,122,0.15)', color: '#00b67a' }}
-                          >
-                            LIVE ODDS
-                          </span>
-                        ) : activeSport === 'football' ? (
-                          <span
-                            className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                            style={{ backgroundColor: 'rgba(100,116,139,0.15)', color: '#94a3b8' }}
-                          >
-                            DEMO DATA
-                          </span>
-                        ) : null}
+                  {/* Section header — football uses FootballHome's own sections */}
+                  {activeSport !== 'football' && (
+                    <div className="mb-5">
+                      <div className="flex items-center gap-3 mb-1">
+                        <h1 className="text-xl font-bold" style={{ color: C.text }}>
+                          {SPORT_NAMES[activeSport]}
+                        </h1>
                       </div>
+                      <p className="text-sm" style={{ color: C.textSecondary }}>
+                        {getFixtureSubtitle()}
+                      </p>
                     </div>
-                    <p className="text-sm" style={{ color: C.textSecondary }}>
-                      {getFixtureSubtitle()}
-                    </p>
-                  </div>
+                  )}
 
                   {/* ── Sport feeds ─────────────────────────────────────── */}
 
-                  {activeSport === 'football' && (() => {
-                    const bias = getTimeOfDayBias();
-                    const casinoCta = (
-                      <button
-                        key="casino-cta"
-                        onClick={() => { setActiveView('casino'); window.scrollTo({ top: 0, behavior: 'instant' }); }}
-                        className="w-full rounded-2xl overflow-hidden text-left"
-                        style={{
-                          background: bias === 'casino'
-                            ? 'linear-gradient(135deg, rgba(108,99,255,0.2) 0%, rgba(9,1,30,0.95) 100%)'
-                            : 'rgba(10,14,28,0.8)',
-                          border: '1px solid rgba(108,99,255,0.25)',
-                        }}
-                      >
-                        <div className="flex items-center gap-4 px-4 py-3.5">
-                          <span className="text-3xl">{bias === 'casino' ? '🌙' : bias === 'evening' ? '🎰' : '🎲'}</span>
-                          <div className="flex-1">
-                            <p className="text-sm font-black font-display" style={{ color: '#F0F6FF' }}>
-                              {bias === 'casino' ? 'Night Sessions Live' : bias === 'evening' ? 'Evening Casino Bonus' : 'Casino'}
-                            </p>
-                            <p className="text-xs" style={{ color: '#9B8FFF' }}>
-                              {bias === 'casino' ? 'Tables are hot right now' : bias === 'evening' ? '50 free spins waiting' : 'Live tables · Slots · Crash games'}
-                            </p>
-                          </div>
-                          <div
-                            className="px-3 py-1.5 rounded-full text-xs font-black"
-                            style={{ background: 'linear-gradient(135deg, #6C63FF, #9B5DE5)', color: '#F0F6FF' }}
-                          >
-                            Play
-                          </div>
-                        </div>
-                      </button>
-                    );
-
-                    const cards = footballFixturesLive.map((fixture, i) => (
-                      <EventCard
-                        key={fixture.id}
-                        fixture={fixture}
-                        index={i}
-                        hero={isMobile}
-                        onViewMatch={f => setSelectedFixture(f)}
-                      />
-                    ));
-
-                    // Inject DailyChallengeCard at position 1
-                    if (cards.length >= 1) {
-                      cards.splice(1, 0, <DailyChallengeCard key="daily-challenge" index={0} />);
-                    }
-                    // Inject casino CTA only for users who aren't sports-only
-                    if (intent !== 'sports') {
-                      if (cards.length >= 4) {
-                        cards.splice(bias === 'casino' ? 0 : cards.length, 0, casinoCta);
-                      } else {
-                        cards.push(casinoCta);
-                      }
-                    }
-
-                    return <SwipeFeed topOffset={totalLiveCount > 0 ? 168 : 136}>{cards}</SwipeFeed>;
-                  })()}
+                  {activeSport === 'football' && (
+                    <FootballHome
+                      fixtures={footballFixturesLive}
+                      intent={intent}
+                      onViewMatch={f => setSelectedFixture(f)}
+                      onOpenCasino={() => setActiveView('casino')}
+                    />
+                  )}
 
                   {activeSport === 'horseracing' && (
                     horseRacingOdds.length > 0 ? (
@@ -1259,7 +1015,7 @@ function AppContent() {
         </div>
       </main>
 
-      {/* ── Position Builder (desktop panel + mobile bottom sheet) ─────────── */}
+      {/* ── Bet slip (desktop panel + mobile tray and sheet) ───────────────── */}
       <PositionBuilder
         mobileOpen={mobileSlipOpen}
         onMobileOpenChange={setMobileSlipOpen}
@@ -1273,6 +1029,7 @@ function AppContent() {
         activeTab={activeView}
         onTabChange={handleBottomNavTab}
         liveCount={totalLiveCount}
+        openBetCount={openBetCount}
         intent={intent}
       />
     </div>

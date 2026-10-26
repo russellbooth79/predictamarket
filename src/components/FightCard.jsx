@@ -182,7 +182,7 @@ export default function FightCard({ fixture, index = 0 }) {
             </div>
             <span
               className="text-[10px] font-black uppercase tracking-widest mt-1.5"
-              style={{ color: '#3A4560' }}
+              style={{ color: '#6B7894' }}
             >
               VS
             </span>
@@ -281,7 +281,7 @@ export default function FightCard({ fixture, index = 0 }) {
           className="px-4 py-2 text-center"
           style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
         >
-          <span className="text-xs" style={{ color: '#3A4560' }}>{fixture.venue}</span>
+          <span className="text-xs" style={{ color: '#6B7894' }}>{fixture.venue}</span>
         </div>
       )}
     </motion.div>

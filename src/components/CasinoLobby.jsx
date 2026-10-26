@@ -26,7 +26,7 @@ const ROOMS = [
 const MOODS = [
   { id: 'thrill',   label: 'Quick Thrill',    sub: 'Fast games, instant results',  icon: '⚡', color: '#FF3366' },
   { id: 'chill',    label: 'Chill Session',   sub: 'Low stakes, lose yourself',    icon: '🌊', color: '#00D9FF' },
-  { id: 'bigswing', label: 'Big Swing Night', sub: 'High stakes, life-changing',   icon: '🎯', color: '#FFD700' },
+  { id: 'bigswing', label: 'Big Swing',       sub: 'Higher-stakes tables',          icon: '🎯', color: '#FFD700' },
   { id: 'explore',  label: 'Explorer',        sub: 'Show me something new',        icon: '🔭', color: '#B06FFF' },
 ];
 
@@ -237,7 +237,7 @@ function MoodGate({ onSelect }) {
         transition={{ delay: 0.6 }}
         onClick={() => onSelect(null)}
         className="mt-6 text-[11px]"
-        style={{ color: '#3A4560' }}
+        style={{ color: '#6B7894' }}
       >
         Skip — show me everything
       </motion.button>
@@ -327,12 +327,12 @@ function SignalCard({ game, onPlay }) {
             <span className="text-xs font-bold" style={{ color: '#9B8FFF' }}>
               {game.players.toLocaleString()}
             </span>
-            <span className="text-[10px]" style={{ color: '#3A4560' }}>playing</span>
+            <span className="text-[10px]" style={{ color: '#6B7894' }}>playing</span>
           </div>
           <div className="flex items-center gap-1">
             <TrendingUp className="w-3 h-3" style={{ color: '#7B8CAA' }} />
             <span className="text-xs font-bold" style={{ color: '#9B8FFF' }}>{game.rtp}%</span>
-            <span className="text-[10px]" style={{ color: '#3A4560' }}>RTP</span>
+            <span className="text-[10px]" style={{ color: '#6B7894' }}>RTP</span>
           </div>
           <div className="ml-auto">
             <span
@@ -592,7 +592,7 @@ function GameModal({ game, onClose }) {
                 </button>
               </div>
 
-              <p className="text-[10px] text-center" style={{ color: '#3A4560' }}>
+              <p className="text-[10px] text-center" style={{ color: '#6B7894' }}>
                 Demo only · 18+ · BeGambleAware.org
               </p>
             </motion.div>
@@ -612,9 +612,6 @@ export default function CasinoLobby() {
   const [activeRoom, setActiveRoom] = useState('all');
   const [selectedGame, setSelectedGame] = useState(null);
   const [pulseIdx, setPulseIdx] = useState(0);
-
-  const hour = new Date().getHours();
-  const isLateNight = hour >= 22 || hour < 5;
 
   function handleMoodSelect(selectedMood) {
     setMood(selectedMood);
@@ -641,22 +638,6 @@ export default function CasinoLobby() {
       <AnimatePresence>
         {selectedGame && <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} />}
       </AnimatePresence>
-
-      {/* Late Night Banner */}
-      {isLateNight && (
-        <div
-          className="flex items-center justify-center gap-2 py-2 px-4 text-xs font-bold"
-          style={{
-            background: 'linear-gradient(90deg, rgba(108,99,255,0.15), rgba(176,111,255,0.15))',
-            borderBottom: '1px solid rgba(108,99,255,0.2)',
-          }}
-        >
-          <motion.span animate={{ opacity: [0.6,1,0.6] }} transition={{ duration: 2, repeat: Infinity }}>
-            🌙
-          </motion.span>
-          <span style={{ color: '#9B8FFF' }}>Night Sessions · 3× First Deposit · 22:00 – 05:00</span>
-        </div>
-      )}
 
       {/* Header */}
       <div className="px-4 pt-4 pb-3">
@@ -714,7 +695,7 @@ export default function CasinoLobby() {
                 {MOODS.find(m => m.id === mood)?.icon} {MOODS.find(m => m.id === mood)?.label}
               </span>
             </div>
-            <button onClick={() => setShowMoodGate(true)} className="text-[10px] font-bold" style={{ color: '#3A4560' }}>
+            <button onClick={() => setShowMoodGate(true)} className="text-[10px] font-bold" style={{ color: '#6B7894' }}>
               Change
             </button>
           </div>
@@ -758,7 +739,7 @@ export default function CasinoLobby() {
             </div>
 
             <div className="px-4 mb-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#3A4560' }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6B7894' }}>
                 {filteredGames.length} games · sorted by live activity
               </p>
             </div>
@@ -842,7 +823,7 @@ export default function CasinoLobby() {
             {/* Up next queue */}
             {pulseGames.length > 1 && (
               <div className="mt-5">
-                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: '#3A4560' }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: '#6B7894' }}>
                   Up next
                 </p>
                 <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>

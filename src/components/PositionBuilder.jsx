@@ -36,8 +36,8 @@ const HIGH_STAKE_THRESHOLD = 20;
 const SUCCESS_DISPLAY_MS = 2500;
 const MAX_RECOMMENDED_LEGS = 6;
 
-// Mobile tray height — SwipeFeed reads this to keep cards clear of the tray
-export const MOBILE_TRAY_H = 60;
+// Mobile tray height (App's bottom spacer leaves matching room for it)
+const MOBILE_TRAY_H = 60;
 
 export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange }) {
   const {
@@ -154,7 +154,7 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
               backgroundClip: 'text',
             }}
           >
-            Position Builder
+            Bet slip
           </h2>
           {hasSelections && (
             <span
@@ -176,10 +176,10 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
         {hasSelections && status === 'idle' && (
           <button
             className="flex items-center gap-1 text-xs transition-colors"
-            style={{ color: '#3A4560' }}
+            style={{ color: '#6B7894' }}
             onClick={clearAll}
             onMouseEnter={e => e.currentTarget.style.color = '#FF3366'}
-            onMouseLeave={e => e.currentTarget.style.color = '#3A4560'}
+            onMouseLeave={e => e.currentTarget.style.color = '#6B7894'}
           >
             <Trash2 className="w-3 h-3" />
             Clear all
@@ -212,7 +212,7 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                 backgroundClip: 'text',
               }}
             >
-              Position Placed!
+              Bet placed!
             </h3>
             <p className="text-sm" style={{ color: '#7B8CAA' }}>Good luck with your prediction.</p>
           </motion.div>
@@ -261,7 +261,7 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
         {status === 'submitting' && (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <Loader2 className="w-10 h-10 animate-spin mb-4" style={{ color: '#6C63FF' }} />
-            <p className="text-sm" style={{ color: '#7B8CAA' }}>Placing your position...</p>
+            <p className="text-sm" style={{ color: '#7B8CAA' }}>Placing your bet...</p>
           </div>
         )}
 
@@ -275,8 +275,8 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
               <LayoutGrid className="w-6 h-6" style={{ color: '#6C63FF', opacity: 0.6 }} />
             </div>
             <h3 className="text-sm font-bold mb-1" style={{ color: '#7B8CAA' }}>No selections yet</h3>
-            <p className="text-xs max-w-[190px]" style={{ color: '#3A4560' }}>
-              Tap any odds to add to your position builder.
+            <p className="text-xs max-w-[190px]" style={{ color: '#6B7894' }}>
+              Tap any price to add it to your slip.
             </p>
           </div>
         )}
@@ -308,7 +308,7 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                 </span>
               </div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs" style={{ color: '#3A4560' }}>Combined Odds</span>
+                <span className="text-xs" style={{ color: '#6B7894' }}>Combined Odds</span>
                 <span className="font-mono text-sm font-bold" style={{ color: '#9B8FFF' }}>
                   {formatDecimalOdds(combinedDecimalOdds, format)}
                 </span>
@@ -325,11 +325,11 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                     <span className="text-[10px] truncate max-w-[72px]" style={{ color: '#7B8CAA' }}>
                       {sel.outcomeName}
                     </span>
-                    <span className="text-[10px] font-mono" style={{ color: '#3A4560' }}>
+                    <span className="text-[10px] font-mono" style={{ color: '#6B7894' }}>
                       {formatOdds(sel.probability, format)}
                     </span>
                     {i < selections.length - 1 && (
-                      <span className="text-xs font-black mx-0.5" style={{ color: '#3A4560' }}>+</span>
+                      <span className="text-xs font-black mx-0.5" style={{ color: '#6B7894' }}>+</span>
                     )}
                   </div>
                 ))}
@@ -380,9 +380,9 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                     <button
                       onClick={() => removeSelection(sel.eventId)}
                       className="shrink-0 transition-colors flex items-center justify-center w-8 h-8 -mr-1 active:opacity-60"
-                      style={{ color: '#3A4560' }}
+                      style={{ color: '#6B7894' }}
                       onMouseEnter={e => e.currentTarget.style.color = '#FF3366'}
-                      onMouseLeave={e => e.currentTarget.style.color = '#3A4560'}
+                      onMouseLeave={e => e.currentTarget.style.color = '#6B7894'}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -535,7 +535,7 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
                   }
                 : {
                     background: 'rgba(255,255,255,0.04)',
-                    color: '#3A4560',
+                    color: '#6B7894',
                     cursor: 'not-allowed',
                     border: '1px solid rgba(255,255,255,0.06)',
                   }
@@ -548,9 +548,9 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
             }}
           >
             {stakeNum >= HIGH_STAKE_THRESHOLD
-              ? `Confirm ${isAccumulator ? accaLabel : 'Position'} · £${stakeNum.toFixed(2)}`
+              ? `Confirm ${isAccumulator ? accaLabel : 'bet'} · £${stakeNum.toFixed(2)}`
               : stakeNum > 0
-                ? `Place ${isAccumulator ? accaLabel : 'Position'} · £${stakeNum.toFixed(2)}`
+                ? `Place ${isAccumulator ? accaLabel : 'bet'} · £${stakeNum.toFixed(2)}`
                 : 'Enter Stake'}
           </button>
         </div>
@@ -561,11 +561,11 @@ export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange
         className="px-4 py-2.5 mt-auto"
         style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
       >
-        <div className="flex items-center justify-between text-[10px]" style={{ color: '#3A4560' }}>
+        <div className="flex items-center justify-between text-[10px]" style={{ color: '#6B7894' }}>
           <button
             className="underline transition-colors"
             onMouseEnter={e => e.currentTarget.style.color = '#7B8CAA'}
-            onMouseLeave={e => e.currentTarget.style.color = '#3A4560'}
+            onMouseLeave={e => e.currentTarget.style.color = '#6B7894'}
           >
             Deposit Limits
           </button>

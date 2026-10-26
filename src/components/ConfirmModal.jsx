@@ -2,7 +2,7 @@
  * ConfirmModal.jsx
  *
  * Confirmation modal triggered when stake >= 20.
- * Shows full selection details with a clear summary of the position
+ * Shows full selection details with a clear summary of the bet
  * before final confirmation.
  *
  * PredictaMarket v3 palette: indigo confirm button, deep navy card.
@@ -79,12 +79,12 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
                 <AlertTriangle className="w-5 h-5" style={{ color: '#f59e0b' }} />
               </div>
               <h3 className="text-lg font-semibold text-white">
-                Confirm Position
+                Confirm bet
               </h3>
             </div>
 
             <p className="text-sm text-gray-400 mb-4">
-              You are placing a position of <span className="font-mono text-white font-medium">{'\u00A3'}{parsedStake.toFixed(2)}</span>. Please review your selection{selections.length > 1 ? 's' : ''} below.
+              You are placing a bet of <span className="font-mono text-white font-medium">{'\u00A3'}{parsedStake.toFixed(2)}</span>. Please review your selection{selections.length > 1 ? 's' : ''} below.
             </p>
 
             {/* Selection details */}
@@ -156,7 +156,7 @@ export default function ConfirmModal({ isOpen, selections, stake, potentialRetur
                 onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #7082F8, #8B9AF9)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #5B6EF5, #7082F8)'}
               >
-                Confirm Position
+                Confirm bet
               </button>
             </div>
           </motion.div>

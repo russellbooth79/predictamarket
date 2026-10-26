@@ -105,7 +105,7 @@ export default function TermsAcceptance({ onNext, onBack, loading = false, total
       </div>
 
       {/* Legal micro-copy */}
-      <p className="text-xs mb-6 mt-8 leading-relaxed" style={{ color: '#3A4560' }}>
+      <p className="text-xs mb-6 mt-8 leading-relaxed" style={{ color: '#6B7894' }}>
         PUNT is operated under a UK Gambling Commission licence. Gambling is for entertainment only.
         Never chase losses. BeGambleAware.org · GamStop.co.uk · 18+
       </p>

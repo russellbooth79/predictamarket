@@ -78,7 +78,7 @@ function PredictionCard({ pred, index }) {
             </div>
           </div>
         </div>
-        <span className="text-[11px]" style={{ color: '#3A4560' }}>{pred.timestamp}</span>
+        <span className="text-[11px]" style={{ color: '#6B7894' }}>{pred.timestamp}</span>
       </div>
 
       {/* Prediction content */}
@@ -106,7 +106,7 @@ function PredictionCard({ pred, index }) {
             <span className="font-mono text-2xl font-black" style={{ background: 'linear-gradient(135deg, #6C63FF, #9B5DE5)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               {pred.liveScore.home}
             </span>
-            <span style={{ color: '#3A4560' }}>–</span>
+            <span style={{ color: '#6B7894' }}>–</span>
             <span className="font-mono text-2xl font-black" style={{ background: 'linear-gradient(135deg, #6C63FF, #9B5DE5)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               {pred.liveScore.away}
             </span>
@@ -146,15 +146,15 @@ function PredictionCard({ pred, index }) {
           >
             <Heart
               className="w-4 h-4 transition-all"
-              style={{ color: liked ? '#FF3366' : '#3A4560', fill: liked ? '#FF3366' : 'none' }}
+              style={{ color: liked ? '#FF3366' : '#6B7894', fill: liked ? '#FF3366' : 'none' }}
             />
-            <span className="text-xs font-semibold" style={{ color: liked ? '#FF7096' : '#3A4560' }}>
+            <span className="text-xs font-semibold" style={{ color: liked ? '#FF7096' : '#6B7894' }}>
               {pred.likes + (liked ? 1 : 0)}
             </span>
           </button>
           <button className="flex items-center gap-1.5">
-            <MessageCircle className="w-4 h-4" style={{ color: '#3A4560' }} />
-            <span className="text-xs font-semibold" style={{ color: '#3A4560' }}>{pred.comments}</span>
+            <MessageCircle className="w-4 h-4" style={{ color: '#6B7894' }} />
+            <span className="text-xs font-semibold" style={{ color: '#6B7894' }}>{pred.comments}</span>
           </button>
         </div>
         <button
@@ -192,7 +192,7 @@ function LeaderboardSnippet() {
       <div className="p-3 space-y-2">
         {LEADERBOARD.map(entry => (
           <div key={entry.rank} className="flex items-center gap-3 px-2 py-2 rounded-xl" style={{ background: entry.rank === 1 ? 'rgba(255,215,0,0.05)' : 'transparent' }}>
-            <span className="w-5 text-center text-xs font-black" style={{ color: entry.rank <= 3 ? '#FFD700' : '#3A4560' }}>{entry.rank}</span>
+            <span className="w-5 text-center text-xs font-black" style={{ color: entry.rank <= 3 ? '#FFD700' : '#6B7894' }}>{entry.rank}</span>
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black text-white flex-shrink-0"
               style={{ background: entry.tierGrad || `${entry.tierColour}33` }}

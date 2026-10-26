@@ -152,7 +152,7 @@ export default function TennisCard({ fixture, index = 0 }) {
           {fixture.competition}
         </span>
         {fixture.round && (
-          <span className="text-xs" style={{ color: '#3A4560' }}>· {fixture.round}</span>
+          <span className="text-xs" style={{ color: '#6B7894' }}>· {fixture.round}</span>
         )}
       </div>
 
@@ -170,19 +170,19 @@ export default function TennisCard({ fixture, index = 0 }) {
               <div key={i} className="flex items-center gap-0.5">
                 <span
                   className="font-mono text-sm font-bold"
-                  style={{ color: set.p1 > set.p2 ? '#F0F6FF' : '#3A4560' }}
+                  style={{ color: set.p1 > set.p2 ? '#F0F6FF' : '#6B7894' }}
                 >
                   {set.p1}
                 </span>
-                <span style={{ color: '#3A4560', fontSize: '10px' }}>-</span>
+                <span style={{ color: '#6B7894', fontSize: '10px' }}>-</span>
                 <span
                   className="font-mono text-sm font-bold"
-                  style={{ color: set.p2 > set.p1 ? '#F0F6FF' : '#3A4560' }}
+                  style={{ color: set.p2 > set.p1 ? '#F0F6FF' : '#6B7894' }}
                 >
                   {set.p2}
                 </span>
                 {i < fixture.liveScore.sets.length - 1 && (
-                  <span style={{ color: '#3A4560', margin: '0 4px' }}>|</span>
+                  <span style={{ color: '#6B7894', margin: '0 4px' }}>|</span>
                 )}
               </div>
             ))}
@@ -254,7 +254,7 @@ export default function TennisCard({ fixture, index = 0 }) {
                 {player.name}
               </span>
               {player.ranking && (
-                <span className="text-[10px]" style={{ color: '#3A4560' }}>WR #{player.ranking}</span>
+                <span className="text-[10px]" style={{ color: '#6B7894' }}>WR #{player.ranking}</span>
               )}
               <span
                 className="font-mono text-2xl font-black"
@@ -284,7 +284,7 @@ export default function TennisCard({ fixture, index = 0 }) {
           className="flex items-center justify-center gap-1.5 px-4 py-2"
           style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
         >
-          <span className="text-xs" style={{ color: '#3A4560' }}>{fixture.venue}</span>
+          <span className="text-xs" style={{ color: '#6B7894' }}>{fixture.venue}</span>
         </div>
       )}
     </motion.div>
