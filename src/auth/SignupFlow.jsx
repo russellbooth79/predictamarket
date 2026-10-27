@@ -29,6 +29,7 @@ import OTPVerification from './steps/OTPVerification.jsx';
 import PersonalDetails from './steps/PersonalDetails.jsx';
 import DepositLimits from './steps/DepositLimits.jsx';
 import TermsAcceptance from './steps/TermsAcceptance.jsx';
+import { PREFILL_ENABLED } from './testPrefill.js';
 
 // ── Framer Motion slide variants ──────────────────────────────────────────────
 // dir > 0 = forward (new step slides in from right)
@@ -191,6 +192,16 @@ export default function SignupFlow({ isOpen }) {
               )}
             </motion.div>
           </AnimatePresence>
+
+          {/* Reminder that the form is pre-filled with test details */}
+          {PREFILL_ENABLED && (
+            <div
+              className="absolute top-1 left-1/2 -translate-x-1/2 px-2 rounded-full text-[9px] font-bold uppercase tracking-wider pointer-events-none"
+              style={{ background: 'rgba(255,181,71,0.15)', color: '#FFB547', border: '1px solid rgba(255,181,71,0.3)', marginTop: 'env(safe-area-inset-top, 0px)' }}
+            >
+              Test data pre-filled
+            </div>
+          )}
 
           {/* Safe area bottom spacer */}
           <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }} />

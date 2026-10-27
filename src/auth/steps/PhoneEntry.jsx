@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import AuthButton from '../components/AuthButton.jsx';
 import { ssoSignIn } from '../mockAuthService.js';
+import { testDetails } from '../testPrefill.js';
 
 // UK mobile: 07xxx xxxxxx — 11 digits starting with 07
 const UK_MOBILE_REGEX = /^07\d{9}$/;
@@ -25,7 +26,7 @@ function normaliseToE164(raw) {
 }
 
 export default function PhoneEntry({ onNext, onClose, onSkip, sendOTP, onSSOPrefill }) {
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(testDetails?.phone ?? '');
   const [loading, setLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(null);
   const [error, setError] = useState('');

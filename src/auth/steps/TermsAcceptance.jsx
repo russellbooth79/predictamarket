@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { ArrowLeft, Check } from 'lucide-react';
 import ProgressDots from '../components/ProgressDots.jsx';
 import AuthButton from '../components/AuthButton.jsx';
+import { testDetails } from '../testPrefill.js';
 
 function Checkbox({ checked, onChange, children, id }) {
   return (
@@ -48,7 +49,7 @@ function Checkbox({ checked, onChange, children, id }) {
 }
 
 export default function TermsAcceptance({ onNext, onBack, loading = false, totalSteps = 4, currentStep = 3 }) {
-  const [tcAccepted, setTcAccepted] = useState(false);
+  const [tcAccepted, setTcAccepted] = useState(testDetails?.acceptTerms ?? false);
   const [marketingAccepted, setMarketingAccepted] = useState(false);
 
   function handleSubmit() {

@@ -17,21 +17,23 @@ import ProgressDots from '../components/ProgressDots.jsx';
 import FormField from '../components/FormField.jsx';
 import AuthButton from '../components/AuthButton.jsx';
 import { lookupAddress } from '../mockAuthService.js';
+import { testDetails } from '../testPrefill.js';
 
 export default function PersonalDetails({ onNext, onBack, prefill = {}, totalSteps = 4, currentStep = 1 }) {
-  const [firstName, setFirstName] = useState(prefill.firstName ?? '');
-  const [lastName, setLastName] = useState(prefill.lastName ?? '');
-  const [email, setEmail] = useState(prefill.email ?? '');
+  // SSO prefill wins; test details (testPrefill.js) fill anything left
+  const [firstName, setFirstName] = useState(prefill.firstName ?? testDetails?.firstName ?? '');
+  const [lastName, setLastName] = useState(prefill.lastName ?? testDetails?.lastName ?? '');
+  const [email, setEmail] = useState(prefill.email ?? testDetails?.email ?? '');
 
   // DOB as separate fields for controlled auto-advance
-  const [dobDay, setDobDay] = useState('');
-  const [dobMonth, setDobMonth] = useState('');
-  const [dobYear, setDobYear] = useState('');
+  const [dobDay, setDobDay] = useState(testDetails?.dob.day ?? '');
+  const [dobMonth, setDobMonth] = useState(testDetails?.dob.month ?? '');
+  const [dobYear, setDobYear] = useState(testDetails?.dob.year ?? '');
 
-  const [postcode, setPostcode] = useState('');
+  const [postcode, setPostcode] = useState(testDetails?.postcode ?? '');
   const [addressLookupLoading, setAddressLookupLoading] = useState(false);
   const [addressResults, setAddressResults] = useState([]);
-  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [selectedAddress, setSelectedAddress] = useState(testDetails?.address ?? null);
   const [showManual, setShowManual] = useState(false);
   const [manualLine1, setManualLine1] = useState('');
   const [manualCity, setManualCity] = useState('');

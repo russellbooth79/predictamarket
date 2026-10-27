@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import ProgressDots from '../components/ProgressDots.jsx';
 import AuthButton from '../components/AuthButton.jsx';
+import { testDetails } from '../testPrefill.js';
 
 const SHAKE_KEYFRAMES = {
   x: [0, -10, 10, -10, 10, -6, 6, -3, 3, 0],
@@ -34,7 +35,7 @@ export default function OTPVerification({
   totalSteps = 4,
   currentStep = 0,
 }) {
-  const [digits, setDigits] = useState(['', '', '', '', '', '']);
+  const [digits, setDigits] = useState(() => testDetails?.otp.split('') ?? ['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [shaking, setShaking] = useState(false);
