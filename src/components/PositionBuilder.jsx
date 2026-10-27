@@ -31,14 +31,13 @@ import { useOddsFormat } from '../context/OddsFormatContext.jsx';
 import { formatOdds, formatDecimalOdds } from '../utils/oddsFormatter.js';
 import ConfirmModal from './ConfirmModal.jsx';
 import { encodeSlip } from '../data/friends.js';
+import { MOBILE_TRAY_H } from '../utils/layout.js';
 
 const QUICK_STAKES = [5, 10, 25, 50];
 const HIGH_STAKE_THRESHOLD = 20;
 const SUCCESS_DISPLAY_MS = 2500;
 const MAX_RECOMMENDED_LEGS = 6;
 
-// Mobile tray height (App's bottom spacer leaves matching room for it)
-const MOBILE_TRAY_H = 60;
 
 export default function PositionBuilder({ mobileOpen = false, onMobileOpenChange }) {
   const {

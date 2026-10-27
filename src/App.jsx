@@ -2,16 +2,18 @@
  * App.jsx — PredictaMarket v5
  *
  * Navigation model:
- *   activeView: 'home' | 'live' | 'mybets' | 'explore' | 'casino' | 'account'
+ *   activeView: 'home' | 'live' | 'discover' | 'mybets' | 'explore' | 'casino' | 'account'
  *   activeSport: 'football' | 'horseracing' | 'tennis' | 'boxing' | 'nfl' | 'nba'
  *   mobileSlipOpen: boolean (lifted from PositionBuilder)
  *
  * Bottom nav (mobile), filtered by the user's intent from profiling:
- *   Home    → activeView = 'home'
- *   Live    → activeView = 'live'    (aggregated live events across all sports)
- *   My Bets → activeView = 'mybets'  (open and settled bets)
- *   Casino  → activeView = 'casino'  (casino or both intents only)
- *   Account → activeView = 'account' (profile, odds display, limits)
+ *   Home     → activeView = 'home'
+ *   Live     → activeView = 'live'     (aggregated live events across all sports)
+ *   Discover → activeView = 'discover' (full-page card feed: matches, boosts,
+ *                                       casino releases, offers, new features)
+ *   My Bets  → activeView = 'mybets'   (open and settled bets)
+ *   Casino   → activeView = 'casino'   (casino or both intents only)
+ * Account (profile, odds display, limits) opens from the avatar menu.
  * The bet slip is a tray that slides up once a selection is added.
  *
  * Desktop sidebar shows competition tree for active sport.
@@ -54,6 +56,7 @@ import TennisCard from './components/TennisCard.jsx';
 import FightCard from './components/FightCard.jsx';
 import AmericanSportsCard from './components/AmericanSportsCard.jsx';
 import FootballHome from './components/FootballHome.jsx';
+import DiscoverFeed from './components/discover/DiscoverFeed.jsx';
 import { SPORTS } from './data/sports.js';
 import { decodeSlip } from './data/friends.js';
 import OddsFormatToggle from './components/OddsFormatToggle.jsx';
@@ -62,7 +65,7 @@ import MyBets, { MyBetsPage } from './components/MyBets.jsx';
 import MatchDetailView from './components/MatchDetailView.jsx';
 import {
   Trophy, Radio, Calendar, Star,
-  Home, Zap, User, Ticket,
+  Home, Zap, Ticket, Compass,
   ChevronRight, Activity, Dices,
 } from 'lucide-react';
 
@@ -469,24 +472,23 @@ function HorseRacingEmpty() {
 }
 
 // ── Mobile Bottom Nav ─────────────────────────────────────────────────────────
-// Tabs depend on what the user chose in profiling:
-//   sports      → Home, Live, My Bets, Account
-//   casino      → Casino, Account
-//   both / null → Home, Live, My Bets, Casino, Account
+// Tabs depend on what the user chose in profiling. Discover sits in the
+// middle; Account lives in the avatar menu.
+//   sports      → Home, Live, Discover, My Bets
+//   casino      → Casino, Discover
+//   both / null → Home, Live, Discover, My Bets, Casino
 
 function getNavTabs(intent) {
+  const discover = { id: 'discover', label: 'Discover', Icon: Compass };
   if (intent === 'casino') {
-    return [
-      { id: 'casino', label: 'Casino', Icon: Dices },
-      { id: 'account', label: 'Account', Icon: User },
-    ];
+    return [{ id: 'casino', label: 'Casino', Icon: Dices }, discover];
   }
   return [
     { id: 'home', label: 'Home', Icon: Home },
     { id: 'live', label: 'Live', Icon: Zap },
+    discover,
     { id: 'mybets', label: 'My Bets', Icon: Ticket },
     ...(intent === 'sports' ? [] : [{ id: 'casino', label: 'Casino', Icon: Dices }]),
-    { id: 'account', label: 'Account', Icon: User },
   ];
 }
 
@@ -554,10 +556,12 @@ function MobileBottomNav({ activeTab, onTabChange, liveCount, openBetCount, inte
 // ── Main App ──────────────────────────────────────────────────────────────────
 
 // ── View transition variants ─────────────────────────────────────────────────
-// Views fade and rise slightly on enter; exit is a quick fade.
+// Views fade and rise slightly on enter; exit is a quick fade. Discover is a
+// position:fixed feed, so it fades only: a transform on its wrapper would
+// make the feed position relative to the wrapper mid-animation.
 
 const viewVariants = {
-  enter: { opacity: 0, y: 10 },
+  enter: (slide) => ({ opacity: 0, y: slide ? 10 : 0 }),
   center: { opacity: 1, y: 0, transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] } },
   exit: { opacity: 0, transition: { duration: 0.12, ease: 'easeIn' } },
 };
@@ -670,8 +674,19 @@ function AppContent() {
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   function handleDropdownAction(actionId) {
+    if (actionId === 'account' || actionId === 'responsible') {
+      setMobileSlipOpen(false);
+      setActiveView('account');
+    }
+    if (actionId === 'discover') setActiveView('discover');
     if (actionId === 'mybets') setMyBetsOpen(true);
     if (actionId === 'signout') logout();
+  }
+
+  function openMatch(fixture) {
+    setSelectedFixture(fixture);
+    setActiveSport('football');
+    setActiveView('home');
   }
 
   function handleSportChange(sport) {
@@ -910,6 +925,7 @@ function AppContent() {
           >
           <motion.div
             key={viewKey}
+            custom={activeView !== 'discover'}
             variants={viewVariants}
             initial="enter"
             animate="center"
@@ -918,11 +934,18 @@ function AppContent() {
 
           {/* ── LIVE VIEW ─────────────────────────────────────────────────── */}
           {activeView === 'live' && (
-            <LiveView allFixtures={allFixtures} onViewMatch={fix => {
-              setSelectedFixture(fix);
-              setActiveView('home');
-              setActiveSport('football');
-            }} />
+            <LiveView allFixtures={allFixtures} onViewMatch={openMatch} />
+          )}
+
+          {/* ── DISCOVER VIEW ─────────────────────────────────────────────── */}
+          {activeView === 'discover' && (
+            <DiscoverFeed
+              fixtures={footballFixturesLive}
+              intent={intent}
+              onViewMatch={openMatch}
+              onNavigate={view => setActiveView(view)}
+              onOpenCasino={() => setActiveView('casino')}
+            />
           )}
 
           {/* ── MY BETS VIEW ──────────────────────────────────────────────── */}

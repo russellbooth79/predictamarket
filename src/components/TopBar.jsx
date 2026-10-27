@@ -5,13 +5,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Bell, ChevronDown, User, History, ShieldCheck, LogOut } from 'lucide-react';
+import { Bell, ChevronDown, User, History, ShieldCheck, LogOut, Compass } from 'lucide-react';
 import { useUser } from '../context/UserContext.jsx';
 import OddsFormatToggle from './OddsFormatToggle.jsx';
 import { SPORTS } from '../data/sports.js';
 
 const DROPDOWN_ITEMS = [
   { id: 'account',     label: 'Account',              icon: User },
+  { id: 'discover',    label: 'Discover',              icon: Compass },
   { id: 'mybets',      label: 'My Bets',               icon: History },
   { id: 'responsible', label: 'Responsible Gambling',  icon: ShieldCheck },
   { id: 'signout',     label: 'Sign Out',              icon: LogOut },
