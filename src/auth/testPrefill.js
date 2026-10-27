@@ -38,6 +38,7 @@ const TEST_DETAILS = {
   // Matches an entry the mock address lookup returns for SW1A
   address: { id: 'addr-sw1-3', line1: '12 Whitehall', line2: null, city: 'London', postcode: 'SW1A 1AA' },
   acceptTerms: true,
+  intent: 'both',                 // profiling: Sports, Casino or Both
 };
 
 /** Test details when pre-fill is on, otherwise null */
