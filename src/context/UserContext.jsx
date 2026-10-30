@@ -51,6 +51,31 @@ function userReducer(state, action) {
       };
     }
 
+    // Cash out an open bet early for its current value
+    case 'CASH_OUT': {
+      const { betId, amount } = action.payload;
+      const bet = state.bets.find(b => b.id === betId);
+      if (!bet || bet.status !== 'open') return state;
+      return {
+        ...state,
+        user: { ...state.user, balance: parseFloat((state.user.balance + amount).toFixed(2)) },
+        bets: state.bets.map(b => (b.id === betId ? { ...b, status: 'cashed out', cashOutAmount: amount, settledAt: new Date().toISOString() } : b)),
+      };
+    }
+
+    // Settle an open bet as won (payout credited) or lost
+    case 'SETTLE_BET': {
+      const { betId, status } = action.payload;
+      const bet = state.bets.find(b => b.id === betId);
+      if (!bet || bet.status !== 'open') return state;
+      const payout = status === 'won' ? bet.potentialReturn : 0;
+      return {
+        ...state,
+        user: { ...state.user, balance: parseFloat((state.user.balance + payout).toFixed(2)) },
+        bets: state.bets.map(b => (b.id === betId ? { ...b, status, settledAt: new Date().toISOString() } : b)),
+      };
+    }
+
     case 'ADD_FUNDS': {
       return {
         ...state,
@@ -100,7 +125,7 @@ export function UserProvider({ children, initialUser }) {
    * The 500ms delay gives realistic feedback timing for loading spinners.
    */
   const placeBet = useCallback(
-    (selections, stakeAmount) => {
+    (selections, stakeAmount, { inPlay = false } = {}) => {
       return new Promise((resolve, reject) => {
         setTimeout(() => {
           if (stakeAmount > state.user.balance) {
@@ -113,16 +138,22 @@ export function UserProvider({ children, initialUser }) {
             selections: selections.map((s) => ({
               eventId: s.eventId,
               eventName: s.eventName,
+              outcomeId: s.outcomeId,
               outcomeName: s.outcomeName,
               probability: s.probability,
               decimalOdds: s.decimalOdds,
+              // Live markets: 'result' (default), 'nextGoal' or 'micro'
+              market: s.market ?? 'result',
+              microId: s.microId ?? null,
+              goalsAtPlacement: s.goalsAtPlacement ?? null,
             })),
             stake: stakeAmount,
-            // Potential return based on probability: stake / (probability / 100)
-            // For singles, use the first selection's probability
+            // Potential return from the true price of every leg:
+            // stake / (combined probability), so accas multiply up
             potentialReturn: parseFloat(
-              (stakeAmount / (selections[0].probability / 100)).toFixed(2)
+              (stakeAmount / selections.reduce((acc, s) => acc * (s.probability / 100), 1)).toFixed(2)
             ),
+            inPlay,
             status: 'open',
             placedAt: new Date().toISOString(),
           };
@@ -143,11 +174,21 @@ export function UserProvider({ children, initialUser }) {
     dispatch({ type: 'ADD_FUNDS', payload: { amount } });
   }, []);
 
+  const cashOut = useCallback((betId, amount) => {
+    dispatch({ type: 'CASH_OUT', payload: { betId, amount } });
+  }, []);
+
+  const settleBet = useCallback((betId, status) => {
+    dispatch({ type: 'SETTLE_BET', payload: { betId, status } });
+  }, []);
+
   const value = {
     user: state.user,
     bets: state.bets,
     placeBet,
     addFunds,
+    cashOut,
+    settleBet,
   };
 
   return (

@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, History, Clock, TrendingUp } from 'lucide-react';
 import { useUser } from '../context/UserContext.jsx';
 import { getProbabilityTextColour } from '../data/oddsUtils.js';
+import CashOutButton from './inplay/CashOutButton.jsx';
 
 const TABS = [
   { id: 'open', label: 'Open' },
@@ -151,16 +152,26 @@ function BetsList() {
                           ? { backgroundColor: 'rgba(91,110,245,0.1)', color: '#5B6EF5', border: '1px solid rgba(91,110,245,0.2)' }
                           : bet.status === 'won'
                             ? { backgroundColor: 'rgba(0,182,122,0.1)', color: '#00b67a', border: '1px solid rgba(0,182,122,0.2)' }
-                            : { backgroundColor: 'rgba(229,48,47,0.1)', color: '#e5302f', border: '1px solid rgba(229,48,47,0.2)' }
+                            : bet.status === 'cashed out'
+                              ? { backgroundColor: 'rgba(198,255,61,0.1)', color: 'var(--action)', border: '1px solid rgba(198,255,61,0.25)' }
+                              : { backgroundColor: 'rgba(229,48,47,0.1)', color: '#e5302f', border: '1px solid rgba(229,48,47,0.2)' }
                       }
                     >
                       {bet.status.charAt(0).toUpperCase() + bet.status.slice(1)}
                     </span>
                     <span className="text-[10px] text-gray-500">
-                      {formatPlacedAt(bet.placedAt)}
+                      {bet.inPlay && 'In-play · '}{formatPlacedAt(bet.placedAt)}
                     </span>
                   </div>
                 </div>
+                {bet.status === 'open' && (
+                  <div className="mt-3">
+                    <CashOutButton bet={bet} />
+                  </div>
+                )}
+                {bet.status === 'cashed out' && (
+                  <p className="mt-2 text-xs font-semibold" style={{ color: 'var(--action)' }}>Cashed out for £{bet.cashOutAmount.toFixed(2)}</p>
+                )}
               </div>
             ))}
           </div>

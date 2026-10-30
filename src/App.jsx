@@ -8,7 +8,9 @@
  *
  * Bottom nav (mobile), filtered by the user's intent from profiling:
  *   Home     → activeView = 'home'
- *   Live     → activeView = 'live'     (aggregated live events across all sports)
+ *   Live     → activeView = 'live'     (In-Play hub: simulated live football with
+ *                                       quick bets, plus other live sports);
+ *              a live match opens activeView = 'inplay-match'
  *   Discover → activeView = 'discover' (full-page card feed: matches, boosts,
  *                                       casino releases, offers, new features)
  *   My Bets  → activeView = 'mybets'   (open and settled bets)
@@ -39,7 +41,6 @@ import AuthGate from './auth/AuthGate.jsx';
 import { footballFixtures, championsLeagueFixtures, tennisFixtures, boxingFixtures, nflFixtures, nbaFixtures } from './data/fixtures.js';
 import { matchDetails } from './data/matchDetails.js';
 import {
-  useFootballOdds,
   useTennisOdds,
   useBoxingOdds,
   useNflOdds,
@@ -58,6 +59,11 @@ import AmericanSportsCard from './components/AmericanSportsCard.jsx';
 import FootballHome from './components/FootballHome.jsx';
 import DiscoverFeed from './components/discover/DiscoverFeed.jsx';
 import { SPORTS } from './data/sports.js';
+import { LiveProvider, useLive } from './live/LiveContext.jsx';
+import InPlayHub from './components/inplay/InPlayHub.jsx';
+import InPlayMatch from './components/inplay/InPlayMatch.jsx';
+import QuickBetSheet from './components/inplay/QuickBetSheet.jsx';
+import LiveToasts from './components/inplay/LiveToasts.jsx';
 import { decodeSlip } from './data/friends.js';
 import OddsFormatToggle from './components/OddsFormatToggle.jsx';
 import PositionBuilder from './components/PositionBuilder.jsx';
@@ -168,7 +174,7 @@ function formatDateLabel(iso) {
 
 // ── Live View ─────────────────────────────────────────────────────────────────
 
-function LiveView({ allFixtures, onViewMatch }) {
+function LiveView({ allFixtures, onViewMatch, title = 'Live Now' }) {
   const liveEvents = allFixtures.filter(f => f.isLive);
 
   if (liveEvents.length === 0) {
@@ -195,7 +201,7 @@ function LiveView({ allFixtures, onViewMatch }) {
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full" style={{ backgroundColor: '#FF3366', opacity: 0.75 }} />
           <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ backgroundColor: '#FF3366' }} />
         </span>
-        <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: '#FF3366' }}>Live Now</h2>
+        <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: '#FF3366' }}>{title}</h2>
         <span
           className="text-xs font-mono font-bold px-2 py-0.5 rounded-full"
           style={{ background: 'rgba(255,51,102,0.12)', color: '#FF3366', border: '1px solid rgba(255,51,102,0.2)' }}
@@ -589,11 +595,15 @@ function AppContent() {
 
 
   // ── Data hooks ──────────────────────────────────────────────────────────────
+  // Football comes through the live engine so scores, minutes and prices
+  // tick in real time everywhere they appear
   const {
     fixtures: footballFixturesLive,
     usingLive: footballUsingLive,
     lastUpdated: footballLastUpdated,
-  } = useFootballOdds();
+    getMatch: getLiveMatch,
+  } = useLive();
+  const [liveMatchId, setLiveMatchId] = useState(null);
 
   const { fixtures: tennisOdds } = useTennisOdds();
   const { fixtures: boxingOdds } = useBoxingOdds();
@@ -683,7 +693,18 @@ function AppContent() {
     if (actionId === 'signout') logout();
   }
 
+  function openLiveMatch(id) {
+    setMobileSlipOpen(false);
+    setLiveMatchId(id);
+    setActiveView('inplay-match');
+  }
+
+  // In-play matches open the live view; everything else the Match Centre
   function openMatch(fixture) {
+    if (getLiveMatch(fixture.id)) {
+      openLiveMatch(fixture.id);
+      return;
+    }
     setSelectedFixture(fixture);
     setActiveSport('football');
     setActiveView('home');
@@ -703,7 +724,11 @@ function AppContent() {
 
   // Key for the main view transition — changes on tab, sport, or match detail
   const showMatchDetail = activeView === 'home' && activeSport === 'football' && selectedFixture;
-  const viewKey = showMatchDetail ? `match-${selectedFixture.id}` : activeView === 'home' ? `home-${activeSport}` : activeView;
+  const viewKey = showMatchDetail ? `match-${selectedFixture.id}`
+    : activeView === 'home' ? `home-${activeSport}`
+    : activeView === 'inplay-match' ? `inplay-${liveMatchId}`
+    : activeView;
+  const otherLiveFixtures = allFixtures.filter(f => f.isLive && f.sport !== 'football');
 
   // ── Section subtitle for home view ──────────────────────────────────────────
   function getFixtureSubtitle() {
@@ -782,7 +807,8 @@ function AppContent() {
           {/* Live Now section */}
           {totalLiveCount > 0 && (
             <div>
-              <div className="flex items-center gap-2 mb-3">
+              {/* Desktop's way into In-Play (mobile uses the bottom nav) */}
+              <button type="button" onClick={() => setActiveView('live')} className="w-full flex items-center gap-2 mb-3">
                 <Radio className="w-3.5 h-3.5" style={{ color: C.liveRed }} />
                 <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: C.text }}>
                   Live Now
@@ -793,7 +819,8 @@ function AppContent() {
                 >
                   {totalLiveCount}
                 </span>
-              </div>
+                <span className="ml-auto text-[10px] font-semibold" style={{ color: '#9B8FFF' }}>In-Play →</span>
+              </button>
               <div className="space-y-1">
                 {sidebarLiveFixtures.map(fix => (
                   <button
@@ -809,7 +836,7 @@ function AppContent() {
                       e.currentTarget.style.color = C.textSecondary;
                     }}
                     onClick={() => {
-                      if (fix.sport === 'football') setSelectedFixture(fix);
+                      if (fix.sport === 'football') openMatch(fix);
                     }}
                   >
                     <span className="relative flex h-1.5 w-1.5 shrink-0">
@@ -934,7 +961,20 @@ function AppContent() {
 
           {/* ── LIVE VIEW ─────────────────────────────────────────────────── */}
           {activeView === 'live' && (
-            <LiveView allFixtures={allFixtures} onViewMatch={openMatch} />
+            <InPlayHub
+              onOpenMatch={openLiveMatch}
+              onTakeBreak={() => setActiveView('account')}
+              otherLive={otherLiveFixtures.length > 0 && (
+                <div className="mt-8">
+                  <LiveView allFixtures={otherLiveFixtures} onViewMatch={openMatch} title="More live sport" />
+                </div>
+              )}
+            />
+          )}
+
+          {/* ── IN-PLAY MATCH VIEW ────────────────────────────────────────── */}
+          {activeView === 'inplay-match' && (
+            <InPlayMatch fixtureId={liveMatchId} onBack={() => setActiveView('live')} />
           )}
 
           {/* ── DISCOVER VIEW ─────────────────────────────────────────────── */}
@@ -994,7 +1034,7 @@ function AppContent() {
                     <FootballHome
                       fixtures={footballFixturesLive}
                       intent={intent}
-                      onViewMatch={f => setSelectedFixture(f)}
+                      onViewMatch={openMatch}
                       onOpenCasino={() => setActiveView('casino')}
                     />
                   )}
@@ -1077,9 +1117,13 @@ function AppContent() {
       {/* ── My Bets slide-in ────────────────────────────────────────────────── */}
       <MyBets isOpen={myBetsOpen} onClose={() => setMyBetsOpen(false)} />
 
+      {/* ── In-play: quick bet sheet and goal / result alerts ───────────── */}
+      <QuickBetSheet />
+      <LiveToasts onOpenMatch={openLiveMatch} />
+
       {/* ── Mobile Bottom Nav ───────────────────────────────────────────────── */}
       <MobileBottomNav
-        activeTab={activeView}
+        activeTab={activeView === 'inplay-match' ? 'live' : activeView}
         onTabChange={handleBottomNavTab}
         liveCount={totalLiveCount}
         openBetCount={openBetCount}
@@ -1106,7 +1150,9 @@ function App() {
           <GamificationProvider>
             <AuthGate>
               <UserProvider>
-                <AppContent />
+                <LiveProvider>
+                  <AppContent />
+                </LiveProvider>
               </UserProvider>
             </AuthGate>
           </GamificationProvider>
