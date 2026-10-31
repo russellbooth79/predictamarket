@@ -23,7 +23,7 @@
 
 import { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { testUser } from '../data/user.js';
-import { trackBetPlaced } from '../utils/analytics.js';
+import { trackBetPlaced, trackFavouriteToggled } from '../utils/analytics.js';
 import { useAuth } from './AuthContext.jsx';
 
 const UserContext = createContext(null);
@@ -110,7 +110,7 @@ export function UserProvider({ children, initialUser }) {
 
   // Register a sync function with AuthContext so it can push user updates here.
   // This avoids prop drilling while keeping the contexts decoupled.
-  const { registerUserSync } = useAuth();
+  const { registerUserSync, savePreferences } = useAuth();
 
   useEffect(() => {
     registerUserSync((user) => {
@@ -176,6 +176,16 @@ export function UserProvider({ children, initialUser }) {
     dispatch({ type: 'ADD_FUNDS', payload: { amount } });
   }, []);
 
+  const toggleFavouriteTeam = useCallback((teamName) => {
+    const currentFavs = state.user.preferences?.favouriteTeams ?? [];
+    const isFav = currentFavs.includes(teamName);
+    const newFavs = isFav
+      ? currentFavs.filter(t => t !== teamName)
+      : [...currentFavs, teamName];
+    savePreferences({ favouriteTeams: newFavs });
+    trackFavouriteToggled(teamName, isFav ? 'remove' : 'add', newFavs.length);
+  }, [state.user.preferences, savePreferences]);
+
   const cashOut = useCallback((betId, amount) => {
     dispatch({ type: 'CASH_OUT', payload: { betId, amount } });
   }, []);
@@ -191,6 +201,7 @@ export function UserProvider({ children, initialUser }) {
     addFunds,
     cashOut,
     settleBet,
+    toggleFavouriteTeam,
   };
 
   return (

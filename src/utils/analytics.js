@@ -109,3 +109,20 @@ export function trackSelectSport(sport) {
 export function trackSelectMatch(matchId, sport) {
   gtag('event', 'select_content', { content_type: 'match', content_id: matchId, sport });
 }
+
+// ── Favourites ────────────────────────────────────────────────────────────────
+
+export function trackFavouriteToggled(teamName, action, totalFavourites) {
+  gtag('event', 'punt_favourite_toggled', { team: teamName, action, total_favourites: totalFavourites });
+}
+
+// ── Scroll depth ──────────────────────────────────────────────────────────────
+
+/**
+ * Fires at 25 / 50 / 75 / 100 % scroll milestones.
+ * Uses the GA4-recommended event name `scroll` with a custom
+ * percent_scrolled param so it appears alongside GA4's built-in 90% scroll.
+ */
+export function trackScrollDepth(depthPct, viewId) {
+  gtag('event', 'punt_scroll_depth', { percent_scrolled: depthPct, view: viewId });
+}

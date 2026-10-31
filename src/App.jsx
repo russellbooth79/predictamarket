@@ -74,7 +74,8 @@ import {
   Home, Zap, Ticket, Compass,
   ChevronRight, Activity, Dices,
 } from 'lucide-react';
-import { trackPageView } from './utils/analytics.js';
+import { trackPageView, trackSelectSport, trackSelectMatch } from './utils/analytics.js';
+import { useScrollDepth } from './hooks/useScrollDepth.js';
 
 // ── Colour palette — v4 dark sport futurism ───────────────────────────────────
 
@@ -599,6 +600,9 @@ function AppContent() {
     trackPageView(activeView);
   }, [activeView]);
 
+  // Track scroll depth milestones per view
+  useScrollDepth(activeView);
+
 
   // ── Data hooks ──────────────────────────────────────────────────────────────
   // Football comes through the live engine so scores, minutes and prices
@@ -703,6 +707,7 @@ function AppContent() {
     setMobileSlipOpen(false);
     setLiveMatchId(id);
     setActiveView('inplay-match');
+    trackSelectMatch(id, 'football');
   }
 
   // In-play matches open the live view; everything else the Match Centre
@@ -720,6 +725,7 @@ function AppContent() {
     setActiveSport(sport);
     setActiveView('home');
     setSelectedFixture(null);
+    trackSelectSport(sport);
   }
 
   function handleBottomNavTab(tabId) {

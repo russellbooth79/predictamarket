@@ -9,9 +9,11 @@
 
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Clock, ChevronRight, Users } from 'lucide-react';
+import { Clock, ChevronRight, Users, Star } from 'lucide-react';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { useOddsFormat } from '../context/OddsFormatContext.jsx';
+import { useUser } from '../context/UserContext.jsx';
+import { trackAddToSlip, trackSelectMatch } from '../utils/analytics.js';
 import { formatOdds } from '../utils/oddsFormatter.js';
 import {
   simpleHash, generateForm, getBetCount, getLiveBettors, getCrowdSplit,
@@ -173,7 +175,13 @@ export function CrowdBar({ fixture }) {
 export default function EventCard({ fixture, index = 0, onViewMatch }) {
   const { addSelection, isSelected } = useBetSlip();
   const { format } = useOddsFormat();
+  const { user, toggleFavouriteTeam } = useUser();
   const [burstId, setBurstId] = useState(null);
+
+  const favouriteTeams = user?.preferences?.favouriteTeams ?? [];
+  const isHomeFav = favouriteTeams.includes(fixture.homeTeam);
+  const isAwayFav = favouriteTeams.includes(fixture.awayTeam);
+  const isAnyFav = isHomeFav || isAwayFav;
 
   const homeForm = generateForm(fixture.homeTeam);
   const awayForm = generateForm(fixture.awayTeam);
@@ -186,7 +194,9 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
   function handleOutcomeClick(outcome) {
     setBurstId(outcome.id);
     setTimeout(() => setBurstId(null), 400);
-    // addSelection toggles: tapping a selected outcome removes it
+    if (!isSelected(fixture.id, outcome.id)) {
+      trackAddToSlip(fixture.sport ?? 'football', outcome.label);
+    }
     addSelection({
       eventId: fixture.id,
       eventName: `${fixture.homeTeam} vs ${fixture.awayTeam}`,
@@ -226,20 +236,32 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
           </span>
           <span className="text-xs" style={{ color: C.textSecondary }}>{formatDateLabel(fixture.kickoff)}</span>
         </div>
-        {fixture.isLive ? (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,51,102,0.12)', border: '1px solid rgba(255,51,102,0.25)' }}>
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full" style={{ backgroundColor: C.liveRed, opacity: 0.75 }} />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ backgroundColor: C.liveRed }} />
-            </span>
-            <span className="text-xs font-bold tracking-wider" style={{ color: C.liveRed }}>{formatKickoff(fixture.kickoff, true, fixture.liveMinute)}</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1" style={{ color: C.textSecondary }}>
-            <Clock className="w-3 h-3" />
-            <span className="text-xs">{formatKickoff(fixture.kickoff, false, null)}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Favourite star — toggles home team (primary team on the card) */}
+          <button
+            type="button"
+            onClick={() => toggleFavouriteTeam(fixture.homeTeam)}
+            aria-label={isHomeFav ? `Unstar ${fixture.homeTeam}` : `Star ${fixture.homeTeam}`}
+            className="p-1 rounded-lg transition-colors"
+            style={{ color: isAnyFav ? '#FFB547' : C.textMuted }}
+          >
+            <Star className="w-3.5 h-3.5" fill={isAnyFav ? '#FFB547' : 'none'} />
+          </button>
+          {fixture.isLive ? (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,51,102,0.12)', border: '1px solid rgba(255,51,102,0.25)' }}>
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full" style={{ backgroundColor: C.liveRed, opacity: 0.75 }} />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ backgroundColor: C.liveRed }} />
+              </span>
+              <span className="text-xs font-bold tracking-wider" style={{ color: C.liveRed }}>{formatKickoff(fixture.kickoff, true, fixture.liveMinute)}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1" style={{ color: C.textSecondary }}>
+              <Clock className="w-3 h-3" />
+              <span className="text-xs">{formatKickoff(fixture.kickoff, false, null)}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Teams */}
@@ -304,7 +326,7 @@ export default function EventCard({ fixture, index = 0, onViewMatch }) {
         {onViewMatch && (
           <button
             type="button"
-            onClick={() => onViewMatch(fixture)}
+            onClick={() => { trackSelectMatch(fixture.id, fixture.sport ?? 'football'); onViewMatch(fixture); }}
             className="flex items-center gap-1 text-xs font-semibold"
             style={{ color: '#9B8FFF' }}
           >

@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
 import { useBetSlip } from '../context/BetSlipContext.jsx';
 import { useOddsFormat } from '../context/OddsFormatContext.jsx';
+import { trackAddToSlip, trackSelectMatch } from '../utils/analytics.js';
 import { formatOdds } from '../utils/oddsFormatter.js';
 import { crowdHeadline, formatKickoff, formatDateLabel } from '../utils/fixtureMeta.js';
 import { getFriendPicks, friendPicksHeadline } from '../data/friends.js';
@@ -31,6 +32,9 @@ export default function MatchRow({ fixture, onViewMatch, index = 0 }) {
   const { format } = useOddsFormat();
 
   function handlePick(outcome) {
+    if (!isSelected(fixture.id, outcome.id)) {
+      trackAddToSlip(fixture.sport ?? 'football', outcome.label);
+    }
     addSelection({
       eventId: fixture.id,
       eventName: `${fixture.homeTeam} vs ${fixture.awayTeam}`,
@@ -57,7 +61,7 @@ export default function MatchRow({ fixture, onViewMatch, index = 0 }) {
       {/* Teams — opens Match Centre */}
       <button
         type="button"
-        onClick={() => onViewMatch?.(fixture)}
+        onClick={() => { trackSelectMatch(fixture.id, fixture.sport ?? 'football'); onViewMatch?.(fixture); }}
         className="flex-1 min-w-0 text-left"
         aria-label={`${fixture.homeTeam} vs ${fixture.awayTeam} — open Match Centre`}
       >
