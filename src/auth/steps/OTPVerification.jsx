@@ -20,6 +20,7 @@ import { ArrowLeft } from 'lucide-react';
 import ProgressDots from '../components/ProgressDots.jsx';
 import AuthButton from '../components/AuthButton.jsx';
 import { testDetails } from '../testPrefill.js';
+import { trackOtpVerified } from '../../utils/analytics.js';
 
 const SHAKE_KEYFRAMES = {
   x: [0, -10, 10, -10, 10, -6, 6, -3, 3, 0],
@@ -77,6 +78,7 @@ export default function OTPVerification({
     setError('');
     try {
       await verifyOTP(phone, code);
+      trackOtpVerified();
       onNext({ code });
     } catch {
       setError('Incorrect code. Try again.');

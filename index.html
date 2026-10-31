@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#05080F" />
     <title>PUNT</title>
+    <!-- Google Analytics GA4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-NZZTGRWMQ8"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      // send_page_view: false — SPA navigations are tracked manually via analytics.js
+      gtag('config', 'G-NZZTGRWMQ8', { send_page_view: false });
+    </script>
   </head>
   <body>
     <div id="root"></div>

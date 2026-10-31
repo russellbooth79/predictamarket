@@ -23,6 +23,7 @@
 
 import { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { testUser } from '../data/user.js';
+import { trackBetPlaced } from '../utils/analytics.js';
 import { useAuth } from './AuthContext.jsx';
 
 const UserContext = createContext(null);
@@ -163,6 +164,7 @@ export function UserProvider({ children, initialUser }) {
             payload: { bet, stakeAmount },
           });
 
+          trackBetPlaced(stakeAmount, selections.length);
           resolve(bet);
         }, 500);
       });

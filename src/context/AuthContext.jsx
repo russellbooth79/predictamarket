@@ -21,6 +21,7 @@
 
 import { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
 import { sendOTP, verifyOTP } from '../auth/mockAuthService.js';
+import { trackSignupComplete, trackLogin, trackProfilingComplete } from '../utils/analytics.js';
 
 // ── Storage key ────────────────────────────────────────────────────────────────
 
@@ -290,6 +291,7 @@ export function AuthProvider({ children }) {
   const completeSignup = useCallback((formData) => {
     const user = buildUserProfile(formData);
     dispatch({ type: 'COMPLETE_SIGNUP', payload: { user } });
+    trackSignupComplete();
   }, []);
 
   /**
@@ -304,6 +306,7 @@ export function AuthProvider({ children }) {
       if (raw) {
         const user = JSON.parse(raw);
         dispatch({ type: 'LOGIN_SUCCESS', payload: { user } });
+        trackLogin('phone');
         return;
       }
     } catch {
@@ -313,6 +316,7 @@ export function AuthProvider({ children }) {
     // No stored session — create a guest returning-user profile
     const user = buildGuestProfile({ name: 'Returning User', initials: 'RU', phone });
     dispatch({ type: 'LOGIN_SUCCESS', payload: { user } });
+    trackLogin('phone');
   }, []);
 
   /**
@@ -338,6 +342,7 @@ export function AuthProvider({ children }) {
         },
       },
     });
+    trackProfilingComplete(prefs.intent);
   }, []);
 
   const closeProfiling = useCallback(() => {

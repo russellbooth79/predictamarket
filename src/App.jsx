@@ -74,6 +74,7 @@ import {
   Home, Zap, Ticket, Compass,
   ChevronRight, Activity, Dices,
 } from 'lucide-react';
+import { trackPageView } from './utils/analytics.js';
 
 // ── Colour palette — v4 dark sport futurism ───────────────────────────────────
 
@@ -592,6 +593,11 @@ function AppContent() {
   useEffect(() => {
     if (intent === 'casino') setActiveView('casino');
   }, [intent]);
+
+  // Track SPA navigation in GA4
+  useEffect(() => {
+    trackPageView(activeView);
+  }, [activeView]);
 
 
   // ── Data hooks ──────────────────────────────────────────────────────────────
